@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/davidmdm/x/xerr"
@@ -41,21 +40,11 @@ func Execute(ctx context.Context, wasm []byte) (output string, err error) {
 		NewModuleConfig().
 		WithStdout(&stdout).
 		WithStderr(&stderr).
-		WithStdin(os.Stdin).
 		WithRandSource(rand.Reader).
 		WithSysNanosleep().
 		WithSysNanotime().
-		WithSysWalltime()
-
-	fmt.Println("PPLLOUP")
-
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println(r)
-		} else {
-			fmt.Println("nothing to recover")
-		}
-	}()
+		WithSysWalltime().
+		WithArgs("exe")
 
 	if _, err := wasi.InstantiateModule(ctx, mod, moduleCfg); err != nil {
 		details := stderr.String()
