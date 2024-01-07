@@ -1,0 +1,9 @@
+.vscode
+.idea
+
+*.wasm
+*.out
+
+test_output
+
+
