@@ -15,7 +15,7 @@ import (
 	"github.com/davidmdm/x/xcontext"
 	"github.com/davidmdm/x/xerr"
 
-	"github.com/davidmdm/haloumi/internal/wasi"
+	"github.com/davidmdm/halloumi/internal/wasi"
 )
 
 func main() {
@@ -34,12 +34,12 @@ func run() error {
 		return err
 	}
 
-	wasm, err := LoadWasm(ctx, cfg.PackagePath)
+	wasm, err := LoadWasm(ctx, cfg.PlatterPath)
 	if err != nil {
 		return fmt.Errorf("failed to read wasm program: %w", err)
 	}
 
-	output, err := wasi.Execute(ctx, wasm, cfg.ReleaseName, cfg.PackageFlags...)
+	output, err := wasi.Execute(ctx, wasm, cfg.ReleaseName, cfg.PlatterArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to execute wasm: %w", err)
 	}

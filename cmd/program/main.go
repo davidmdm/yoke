@@ -21,21 +21,16 @@ func run() error {
 	encoder.SetIndent("", "  ")
 
 	return encoder.Encode([]any{
-		os.Args,
 		&v1.Pod{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Pod",
-				APIVersion: "v1alpha1",
+				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        "",
-				Namespace:   "",
-				Labels:      map[string]string{},
-				Annotations: map[string]string{},
+				Name:      "example-pod",
+				Namespace: "default",
 			},
 			Spec: v1.PodSpec{
-				Volumes:        []v1.Volume{},
-				InitContainers: []v1.Container{},
 				Containers: []v1.Container{
 					{
 						Name:    "pod-a",

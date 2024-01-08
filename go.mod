@@ -1,4 +1,4 @@
-module github.com/davidmdm/haloumi
+module github.com/davidmdm/halloumi
 
 go 1.21.5
 

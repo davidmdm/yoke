@@ -9,10 +9,10 @@ import (
 )
 
 type Config struct {
-	ReleaseName    string
-	PackagePath    string
-	PackageFlags   []string
 	KubeConfigPath string
+	ReleaseName    string
+	PlatterPath    string
+	PlatterArgs    []string
 }
 
 var home string
@@ -29,7 +29,7 @@ func GetConfig() (Config, error) {
 	args := os.Args[1:]
 	if idx := slices.Index(args, "--"); idx > -1 {
 		if len(args) >= idx {
-			cfg.PackageFlags = args[idx+1:]
+			cfg.PlatterArgs = args[idx+1:]
 		}
 		args = args[:idx]
 	}
@@ -39,10 +39,10 @@ func GetConfig() (Config, error) {
 	}
 
 	cfg.ReleaseName = flag.Arg(0)
-	cfg.PackagePath = flag.Arg(1)
+	cfg.PlatterPath = flag.Arg(1)
 
-	if cfg.ReleaseName == "" || cfg.PackagePath == "" {
-		return cfg, errors.New("two positional arguments required:\n\n   usage: haloumi [release-name] [path]")
+	if cfg.ReleaseName == "" || cfg.PlatterPath == "" {
+		return cfg, errors.New("two positional arguments required:\n\n   usage: halloumi [release-name] [path]")
 	}
 
 	return cfg, nil
