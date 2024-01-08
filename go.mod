@@ -1,4 +1,4 @@
-module wasiplaytime
+module github.com/davidmdm/haloumi
 
 go 1.21.5
 

@@ -1,17 +1,17 @@
 package wasi
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"fmt"
-	"strings"
 
 	"github.com/davidmdm/x/xerr"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
-func Execute(ctx context.Context, wasm []byte) (output string, err error) {
+func Execute(ctx context.Context, wasm []byte, release string, args ...string) (output []byte, err error) {
 	cfg := wazero.
 		NewRuntimeConfig().
 		WithCloseOnContextDone(true)
@@ -28,12 +28,12 @@ func Execute(ctx context.Context, wasm []byte) (output string, err error) {
 	// we default to wiring up commonly used OS functionality.
 	mod, err := wasi.CompileModule(ctx, wasm)
 	if err != nil {
-		return "", fmt.Errorf("failed to compile module: %w", err)
+		return nil, fmt.Errorf("failed to compile module: %w", err)
 	}
 
 	var (
-		stdout strings.Builder
-		stderr strings.Builder
+		stdout bytes.Buffer
+		stderr bytes.Buffer
 	)
 
 	moduleCfg := wazero.
@@ -44,15 +44,15 @@ func Execute(ctx context.Context, wasm []byte) (output string, err error) {
 		WithSysNanosleep().
 		WithSysNanotime().
 		WithSysWalltime().
-		WithArgs("exe")
+		WithArgs(append([]string{release}, args...)...)
 
 	if _, err := wasi.InstantiateModule(ctx, mod, moduleCfg); err != nil {
 		details := stderr.String()
 		if details == "" {
 			details = "(no output captured on stderr)"
 		}
-		return "", fmt.Errorf("failed to instantiate module: %w: stderr: %s", err, details)
+		return nil, fmt.Errorf("failed to instantiate module: %w: stderr: %s", err, details)
 	}
 
-	return stdout.String(), nil
+	return stdout.Bytes(), nil
 }
