@@ -55,9 +55,10 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 		Resource: resourceName,
 	}
 
-	rc := client.dynamic.Resource(gvr)
-
-	_, err = rc.Namespace("default").Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
+	_, err = client.dynamic.
+		Resource(gvr).
+		Namespace("default").
+		Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
 
 	// _, err = rc.Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
 	return err

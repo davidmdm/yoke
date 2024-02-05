@@ -35,7 +35,7 @@ func run() error {
 					{
 						Name:    "echo",
 						Image:   "alpine:latest",
-						Command: []string{"watch", "echo", "hello"},
+						Command: []string{"watch", "echo", "hello", "world"},
 					},
 				},
 			},
