@@ -7,6 +7,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func main() {
@@ -20,7 +21,7 @@ func run() error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 
-	return encoder.Encode([]any{
+	return encoder.Encode([]runtime.Object{
 		&v1.Pod{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Pod",

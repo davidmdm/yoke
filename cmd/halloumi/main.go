@@ -14,7 +14,10 @@ import (
 
 	"github.com/davidmdm/x/xcontext"
 	"github.com/davidmdm/x/xerr"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/davidmdm/halloumi/internal/k8"
 	"github.com/davidmdm/halloumi/internal/wasi"
 )
 
@@ -44,13 +47,25 @@ func run() error {
 		return fmt.Errorf("failed to execute wasm: %w", err)
 	}
 
-	var resources []any
+	var resources []*unstructured.Unstructured
 	if err := json.Unmarshal(output, &resources); err != nil {
 		return fmt.Errorf("failed to unmarshal raw resources: %w", err)
 	}
 
-	if err := ApplyResources(ctx, resources); err != nil {
-		return fmt.Errorf("failed to apply resources: %w", err)
+	restcfg, err := clientcmd.BuildConfigFromFlags("", cfg.KubeConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to build k8 config: %w", err)
+	}
+
+	client, err := k8.NewClient(restcfg)
+	if err != nil {
+		return fmt.Errorf("failed to instantiate k8 client: %w", err)
+	}
+
+	for _, resource := range resources {
+		if err := client.ApplyResource(ctx, resource); err != nil {
+			return fmt.Errorf("failed to apply resource: %w", err)
+		}
 	}
 
 	return nil
@@ -80,10 +95,4 @@ func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
 	}()
 
 	return io.ReadAll(resp.Body)
-}
-
-// TODO
-func ApplyResources(ctx context.Context, resources []any) error {
-	fmt.Println(resources...)
-	return nil
 }
