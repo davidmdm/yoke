@@ -28,27 +28,14 @@ func run() error {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example-pod",
-				Namespace: "default",
+				Name: "app",
 			},
 			Spec: v1.PodSpec{
 				Containers: []v1.Container{
 					{
-						Name:    "pod-a",
-						Image:   "my-image:tag",
-						Command: []string{"do", "the", "thing"},
-						Ports: []v1.ContainerPort{
-							{
-								HostPort:      3000,
-								ContainerPort: 3000,
-							},
-						},
-						Env: []v1.EnvVar{
-							{
-								Name:  "ENV",
-								Value: "VAR",
-							},
-						},
+						Name:    "echo",
+						Image:   "alpine:latest",
+						Command: []string{"watch", "echo", "hello"},
 					},
 				},
 			},

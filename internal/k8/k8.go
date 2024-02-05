@@ -34,30 +34,31 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 
 func (client Client) ApplyResource(ctx context.Context, resource *unstructured.Unstructured) error {
 	gvk := schema.FromAPIVersionAndKind(resource.GetAPIVersion(), resource.GetKind())
-	if gvk.Group == "" {
-		gvk.Group = "core"
-	}
 
 	resources, err := client.discovery.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
 	if err != nil {
 		return fmt.Errorf("failed to discover resources for %s: %w", gvk.GroupVersion().String(), err)
 	}
 
-	gvr := schema.GroupVersionResource{
-		Group:   gvk.Group,
-		Version: gvk.Version,
-		Resource: func() string {
-			for _, api := range resources.APIResources {
-				if api.Kind == gvk.Kind && !strings.Contains(api.Name, "/") {
-					return api.Name
-				}
+	resourceName := func() string {
+		for _, api := range resources.APIResources {
+			if api.Kind == gvk.Kind && !strings.Contains(api.Name, "/") {
+				return api.Name
 			}
-			return ""
-		}(),
+		}
+		return ""
+	}()
+
+	gvr := schema.GroupVersionResource{
+		Group:    gvk.Group,
+		Version:  gvk.Version,
+		Resource: resourceName,
 	}
 
 	rc := client.dynamic.Resource(gvr)
 
-	_, err = rc.Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
+	_, err = rc.Namespace("default").Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
+
+	// _, err = rc.Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
 	return err
 }
