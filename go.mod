@@ -1,6 +1,6 @@
 module github.com/davidmdm/halloumi
 
-go 1.21.5
+go 1.21.6
 
 require (
 	github.com/davidmdm/x/xcontext v0.0.1

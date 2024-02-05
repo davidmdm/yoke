@@ -55,11 +55,15 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 		Resource: resourceName,
 	}
 
+	namespace := resource.GetNamespace()
+	if namespace == "" {
+		namespace = "default"
+	}
+
 	_, err = client.dynamic.
 		Resource(gvr).
-		Namespace("default").
+		Namespace(namespace).
 		Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
 
-	// _, err = rc.Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
 	return err
 }
