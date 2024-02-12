@@ -70,6 +70,10 @@ func run() error {
 		}
 	}
 
+	if err := client.MakeRevision(ctx, cfg.ReleaseName, output); err != nil {
+		return fmt.Errorf("failed to create revision: %w", err)
+	}
+
 	return nil
 }
 

@@ -2,20 +2,27 @@ package k8
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
 type Client struct {
 	dynamic   *dynamic.DynamicClient
 	discovery *discovery.DiscoveryClient
+	clientset *kubernetes.Clientset
 }
 
 func NewClient(cfg *rest.Config) (*Client, error) {
@@ -24,12 +31,21 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 		return nil, fmt.Errorf("failed to create dynamic client component: %w", err)
 	}
 
+	clientset, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create k8 clientset: %w", err)
+	}
+
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discovery client component: %w", err)
 	}
 
-	return &Client{dynamic: dynamicClient, discovery: discoveryClient}, nil
+	return &Client{
+		dynamic:   dynamicClient,
+		discovery: discoveryClient,
+		clientset: clientset,
+	}, nil
 }
 
 func (client Client) ApplyResource(ctx context.Context, resource *unstructured.Unstructured) error {
@@ -63,7 +79,57 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 	_, err = client.dynamic.
 		Resource(gvr).
 		Namespace(namespace).
-		Apply(ctx, resource.GetName(), resource, v1.ApplyOptions{FieldManager: "halloumi"})
+		Apply(ctx, resource.GetName(), resource, metav1.ApplyOptions{FieldManager: "halloumi"})
 
+	return err
+}
+
+func (client Client) MakeRevision(ctx context.Context, release string, resources json.RawMessage) error {
+	configmaps := client.clientset.
+		CoreV1().
+		ConfigMaps("kube-system")
+
+	type Revision struct {
+		Resources json.RawMessage `json:"resources"`
+	}
+
+	data, err := json.Marshal(Revision{resources})
+	if err != nil {
+		return err
+	}
+
+	name := "halloumi-" + release
+
+	revisions, err := configmaps.Get(ctx, name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		_, err := configmaps.Create(
+			ctx,
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Data: map[string]string{
+					"current": "1",
+					"1":       string(data),
+				},
+			},
+			metav1.CreateOptions{FieldManager: "halloumi"},
+		)
+		return err
+	}
+	if err != nil {
+		return fmt.Errorf("failed to lookup revision for %s: %w", release, err)
+	}
+
+	var latest int
+	for key := range revisions.Data {
+		if version, _ := strconv.Atoi(key); version > latest {
+			latest = version
+		}
+	}
+
+	nextVersion := strconv.Itoa(latest + 1)
+	revisions.Data[nextVersion] = string(data)
+	revisions.Data["current"] = nextVersion
+
+	_, err = configmaps.Update(ctx, revisions, metav1.UpdateOptions{FieldManager: "halloumi"})
 	return err
 }
