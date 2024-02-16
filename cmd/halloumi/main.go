@@ -52,7 +52,7 @@ func run() error {
 		return fmt.Errorf("failed to unmarshal raw resources: %w", err)
 	}
 
-	annotateResources(resources, cfg.ReleaseName)
+	addHallmouiMetadata(resources, cfg.ReleaseName)
 
 	restcfg, err := clientcmd.BuildConfigFromFlags("", cfg.KubeConfigPath)
 	if err != nil {
@@ -103,14 +103,21 @@ func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
 	return io.ReadAll(resp.Body)
 }
 
-func annotateResources(resources []*unstructured.Unstructured, release string) {
+func addHallmouiMetadata(resources []*unstructured.Unstructured, release string) {
 	for _, resource := range resources {
 		annotations := resource.GetAnnotations()
 		if annotations == nil {
 			annotations = make(map[string]string)
 		}
 		annotations["managed-by"] = "halloumi"
-		annotations["release"] = release
 		resource.SetAnnotations(annotations)
+
+		labels := resource.GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+		labels["halloumi-release"] = release
+
+		resource.SetLabels(labels)
 	}
 }
