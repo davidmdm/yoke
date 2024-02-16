@@ -17,6 +17,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/davidmdm/halloumi/internal"
 )
 
 type Client struct {
@@ -84,16 +86,12 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 	return err
 }
 
-func (client Client) MakeRevision(ctx context.Context, release string, resources json.RawMessage) error {
+func (client Client) MakeRevision(ctx context.Context, release string, resources []*unstructured.Unstructured) error {
 	configmaps := client.clientset.
 		CoreV1().
 		ConfigMaps("kube-system")
 
-	type Revision struct {
-		Resources json.RawMessage `json:"resources"`
-	}
-
-	data, err := json.Marshal(Revision{resources})
+	data, err := json.Marshal(internal.Revision{Resources: resources})
 	if err != nil {
 		return err
 	}
@@ -132,4 +130,28 @@ func (client Client) MakeRevision(ctx context.Context, release string, resources
 
 	_, err = configmaps.Update(ctx, revisions, metav1.UpdateOptions{FieldManager: "halloumi"})
 	return err
+}
+
+func (client Client) GetCurrentRevision(ctx context.Context, release string) (*internal.Revision, error) {
+	name := "halloumi-" + release
+
+	configmap, err := client.clientset.
+		CoreV1().
+		ConfigMaps("kube-system").
+		Get(ctx, name, metav1.GetOptions{})
+
+	if kerrors.IsNotFound(err) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	var revision internal.Revision
+	if err := json.Unmarshal([]byte(configmap.Data[configmap.Data["current"]]), &revision); err != nil {
+		return nil, err
+	}
+
+	return &revision, nil
 }
