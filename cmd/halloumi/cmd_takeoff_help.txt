@@ -1,0 +1,16 @@
+!yellow halloumi takeoff
+
+!cyan Usage: 
+  halloumi takeoff [flags] <release-name> <platter-path>
+
+!cyan Examples:
+  # deploy a local platter
+  halloumi takeoff my-release ./main.wasm
+
+  # deploy passing arguments to the platter
+  halloumi takeoff my-release ./main.wasm -- -env prod
+
+  # deploy a remote platter
+  halloumi takeoff my-release https://github.com/my_org/infra/releases/v1.2.3-release.wasm
+
+!cyan Flags:

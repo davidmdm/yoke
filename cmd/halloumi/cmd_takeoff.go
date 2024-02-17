@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/clientcmd"
@@ -29,8 +31,20 @@ type TakeoffParams struct {
 	PlatterArgs []string
 }
 
+//go:embed cmd_takeoff_help.txt
+var help string
+
+func init() {
+	help = strings.TrimSpace(internal.Colorize(help))
+}
+
 func GetTakeoffParams(settings GlobalSettings, args []string) (*TakeoffParams, error) {
 	flagset := flag.NewFlagSet("takeoff", flag.ExitOnError)
+
+	flagset.Usage = func() {
+		fmt.Fprintln(flagset.Output(), help)
+		flagset.PrintDefaults()
+	}
 
 	params := TakeoffParams{GlobalSettings: settings}
 
