@@ -1,5 +1,7 @@
 # Halloumi - Infrastructure-as-Code (IaC) Package Deployer for Kubernetes
 
+<img src="./halloumi.jpg" width=600/>
+
 ## Overview
 
 Halloumi is a Helm-inspired infrastructure-as-code (IaC) package deployer.
