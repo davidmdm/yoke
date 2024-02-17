@@ -24,6 +24,8 @@ go install github.com/davidmdm/halloumi/cmd/halloumi@latest
 
 ## Usage
 
+### takeoff (deploy / up)
+
 ```bash
 # deploy local halloumi platter
 halloumi takeoff my-release ./release.wasm
@@ -35,32 +37,18 @@ halloumi takeoff my-release ./release.wasm -- [args...]
 halloumi takeoff my-release https://github.com/my_org/infra/releases/platter-v0.1.0.wasm -- [args...]
 ```
 
-Rolling Back a Deployment
-If needed, you can roll back a deployment using the descent command.
+### descent (rollback / down)
 
-bash
-Copy code
-halloumi descent -v 1
-This command will roll back to version 1 of the deployment.
+TODO - under development
 
-Rendering Configuration
-To render the configuration without deploying, use the runway command.
+### runway (render / export)
 
-bash
-Copy code
-halloumi runway -f path/to/platter.yaml
-This command will render the configuration without making any changes to the cluster.
+TODO - under development
 
-Global Flags
-kubeconfig: Specify the path to the kube config file. Default is "/Users/davidmdm/.kube/config".
-Version
-Check the installed version of Halloumi using the following command:
+## Contributions
 
-bash
-Copy code
-halloumi version
-Contributions
 Contributions are welcome! If you encounter any issues or have suggestions, please open an issue on the Halloumi GitHub repository.
 
-License
+## License
+
 This project is licensed under the MIT License.
