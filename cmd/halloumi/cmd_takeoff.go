@@ -12,12 +12,14 @@ import (
 	"os"
 	"slices"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/davidmdm/x/xerr"
+
 	"github.com/davidmdm/halloumi/internal"
 	"github.com/davidmdm/halloumi/internal/k8"
 	"github.com/davidmdm/halloumi/internal/wasi"
-	"github.com/davidmdm/x/xerr"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type TakeoffParams struct {
