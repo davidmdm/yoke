@@ -4,10 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func main() {
@@ -21,24 +17,37 @@ func run() error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 
-	return encoder.Encode([]runtime.Object{
-		&v1.Pod{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Pod",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "app",
-			},
-			Spec: v1.PodSpec{
-				Containers: []v1.Container{
-					{
-						Name:    "echo",
-						Image:   "alpine:latest",
-						Command: []string{"watch", "echo", "hello", "world"},
-					},
-				},
-			},
-		},
-	})
+	fmt.Println(`[{
+  		"apiVersion": "apps/v1",
+  		"kind": "Deployment",
+  		"metadata": {
+  		  "name": "sample-app-prod"
+  		},
+  		"spec": {
+  		  "replicas": 3,
+  		  "selector": {
+  		    "matchLabels": {
+  		      "app": "sample-app"
+  		    }
+  		  },
+  		  "template": {
+  		    "metadata": {
+  		      "labels": {
+  		        "app": "sample-app"
+  		      }
+  		    },
+  		    "spec": {
+  		      "containers": [
+  		        {
+  		          "name": "web-app",
+  		          "image": "alpine:latest",
+  		          "command": ["watch", "echo", "hello"]
+  		        }
+  		      ]
+  		    }
+  		  }
+  		}
+	}]`)
+
+	return nil
 }

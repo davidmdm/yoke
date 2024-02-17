@@ -12,10 +12,11 @@ import (
 	"slices"
 	"syscall"
 
-	"github.com/davidmdm/x/xcontext"
-	"github.com/davidmdm/x/xerr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/davidmdm/x/xcontext"
+	"github.com/davidmdm/x/xerr"
 
 	"github.com/davidmdm/halloumi/internal/k8"
 	"github.com/davidmdm/halloumi/internal/wasi"
@@ -72,6 +73,10 @@ func run() error {
 
 	if err := client.MakeRevision(ctx, cfg.ReleaseName, resources); err != nil {
 		return fmt.Errorf("failed to create revision: %w", err)
+	}
+
+	if err := client.RemoveOrphans(ctx, cfg.ReleaseName); err != nil {
+		return fmt.Errorf("failed to remove orhpans: %w", err)
 	}
 
 	return nil

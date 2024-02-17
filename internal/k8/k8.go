@@ -18,6 +18,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/davidmdm/x/xerr"
+
 	"github.com/davidmdm/halloumi/internal"
 )
 
@@ -51,38 +53,12 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 }
 
 func (client Client) ApplyResource(ctx context.Context, resource *unstructured.Unstructured) error {
-	gvk := schema.FromAPIVersionAndKind(resource.GetAPIVersion(), resource.GetKind())
-
-	resources, err := client.discovery.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+	resourceInterface, err := client.getDynamicResourceInterface(resource)
 	if err != nil {
-		return fmt.Errorf("failed to discover resources for %s: %w", gvk.GroupVersion().String(), err)
+		return fmt.Errorf("failed to resolve resource: %w", err)
 	}
 
-	resourceName := func() string {
-		for _, api := range resources.APIResources {
-			if api.Kind == gvk.Kind && !strings.Contains(api.Name, "/") {
-				return api.Name
-			}
-		}
-		return ""
-	}()
-
-	gvr := schema.GroupVersionResource{
-		Group:    gvk.Group,
-		Version:  gvk.Version,
-		Resource: resourceName,
-	}
-
-	namespace := resource.GetNamespace()
-	if namespace == "" {
-		namespace = "default"
-	}
-
-	_, err = client.dynamic.
-		Resource(gvr).
-		Namespace(namespace).
-		Apply(ctx, resource.GetName(), resource, metav1.ApplyOptions{FieldManager: "halloumi"})
-
+	_, err = resourceInterface.Apply(ctx, resource.GetName(), resource, metav1.ApplyOptions{FieldManager: "halloumi"})
 	return err
 }
 
@@ -132,7 +108,7 @@ func (client Client) MakeRevision(ctx context.Context, release string, resources
 	return err
 }
 
-func (client Client) GetCurrentRevision(ctx context.Context, release string) (*internal.Revision, error) {
+func (client Client) RemoveOrphans(ctx context.Context, release string) error {
 	name := "halloumi-" + release
 
 	configmap, err := client.clientset.
@@ -141,17 +117,86 @@ func (client Client) GetCurrentRevision(ctx context.Context, release string) (*i
 		Get(ctx, name, metav1.GetOptions{})
 
 	if kerrors.IsNotFound(err) {
-		return nil, nil
+		return nil
 	}
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var revision internal.Revision
-	if err := json.Unmarshal([]byte(configmap.Data[configmap.Data["current"]]), &revision); err != nil {
-		return nil, err
+	current, _ := strconv.Atoi(configmap.Data["current"])
+	if current == 1 {
+		return nil
 	}
 
-	return &revision, nil
+	var currentRevision internal.Revision
+	if err := json.Unmarshal([]byte(configmap.Data[strconv.Itoa(current)]), &currentRevision); err != nil {
+		return err
+	}
+
+	canonical := func(resource *unstructured.Unstructured) string {
+		return resource.GetNamespace() + "/" + resource.GetKind() + "/" + resource.GetName()
+	}
+
+	set := map[string]struct{}{}
+	for _, resource := range currentRevision.Resources {
+		set[canonical(resource)] = struct{}{}
+	}
+
+	var previousRevision internal.Revision
+	if err := json.Unmarshal([]byte(configmap.Data[strconv.Itoa(current-1)]), &previousRevision); err != nil {
+		return err
+	}
+
+	var errs []error
+
+	for _, resource := range previousRevision.Resources {
+		if _, ok := set[canonical(resource)]; ok {
+			continue
+		}
+
+		resourceInterface, err := client.getDynamicResourceInterface(resource)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to resolve resource %s: %w", canonical(resource), err))
+			continue
+		}
+
+		if err := resourceInterface.Delete(ctx, resource.GetName(), metav1.DeleteOptions{}); err != nil {
+			errs = append(errs, fmt.Errorf("failed to delete %s: %w", canonical(resource), err))
+			continue
+		}
+	}
+
+	return xerr.MultiErrOrderedFrom("", errs...)
+}
+
+func (client Client) getDynamicResourceInterface(resource *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
+	gvk := schema.FromAPIVersionAndKind(resource.GetAPIVersion(), resource.GetKind())
+
+	resources, err := client.discovery.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover resources for %s: %w", gvk.GroupVersion().String(), err)
+	}
+
+	resourceName := func() string {
+		for _, api := range resources.APIResources {
+			if api.Kind == gvk.Kind && !strings.Contains(api.Name, "/") {
+				return api.Name
+			}
+		}
+		return ""
+	}()
+
+	gvr := schema.GroupVersionResource{
+		Group:    gvk.Group,
+		Version:  gvk.Version,
+		Resource: resourceName,
+	}
+
+	namespace := resource.GetNamespace()
+	if namespace == "" {
+		namespace = "default"
+	}
+
+	return client.dynamic.Resource(gvr).Namespace(namespace), nil
 }
