@@ -48,7 +48,7 @@ func run() error {
 	}
 
 	switch cmd := flag.Arg(0); cmd {
-	case "takeoff", "up":
+	case "takeoff", "up", "deploy":
 		{
 			params, err := GetTakeoffParams(settings, flag.Args()[1:])
 			if err != nil {
@@ -60,7 +60,7 @@ func run() error {
 		{
 			return Descent(ctx)
 		}
-	case "runway", "render":
+	case "runway", "render", "export":
 		{
 			return Runway(ctx)
 		}

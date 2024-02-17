@@ -7,9 +7,9 @@ halloumi is a helm inspired infrastructure-as-code (IaC) package deployer.
 Deploys "halloumi platters" to a kubernetes cluster.
 
 !cyan Available commands:
-takeoff   (alias: up)
+takeoff   (aliases: up, deploy)
 descent   (aliases: down, rollback)
-runway    (alias: render)
+runway    (aliases: render, export)
 version
 
 !cyan Global Flags:
