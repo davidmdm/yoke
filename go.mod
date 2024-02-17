@@ -1,6 +1,6 @@
 module github.com/davidmdm/halloumi
 
-go 1.21.6
+go 1.22
 
 require (
 	github.com/davidmdm/ansi v0.0.6
