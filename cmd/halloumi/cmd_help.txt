@@ -1,0 +1,15 @@
+!yellow Halloumi
+
+!cyan What is it?
+halloumi is a helm inspired infrastructure-as-code (IaC) package deployer.
+
+!cyan What does it do?
+Deploys "halloumi platters" to a kubernetes cluster.
+
+!cyan Available commands:
+takeoff   (alias: up)
+descent   (aliases: down, rollback)
+runway    (alias: render)
+version
+
+!cyan Global Flags:

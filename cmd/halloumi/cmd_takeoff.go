@@ -32,17 +32,17 @@ type TakeoffParams struct {
 }
 
 //go:embed cmd_takeoff_help.txt
-var help string
+var takeoffHelp string
 
 func init() {
-	help = strings.TrimSpace(internal.Colorize(help))
+	takeoffHelp = strings.TrimSpace(internal.Colorize(takeoffHelp))
 }
 
 func GetTakeoffParams(settings GlobalSettings, args []string) (*TakeoffParams, error) {
 	flagset := flag.NewFlagSet("takeoff", flag.ExitOnError)
 
 	flagset.Usage = func() {
-		fmt.Fprintln(flagset.Output(), help)
+		fmt.Fprintln(flagset.Output(), takeoffHelp)
 		flagset.PrintDefaults()
 	}
 

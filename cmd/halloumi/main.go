@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
+	"strings"
 	"syscall"
 
+	"github.com/davidmdm/halloumi/internal"
 	"github.com/davidmdm/x/xcontext"
 )
 
@@ -17,12 +21,24 @@ func main() {
 	}
 }
 
+//go:embed cmd_help.txt
+var rootHelp string
+
+func init() {
+	rootHelp = strings.TrimSpace(internal.Colorize(rootHelp))
+}
+
 func run() error {
 	ctx, done := xcontext.WithSignalCancelation(context.Background(), syscall.SIGINT)
 	defer done()
 
 	var settings GlobalSettings
 	RegisterGlobalFlags(flag.CommandLine, &settings)
+
+	flag.Usage = func() {
+		fmt.Fprintln(flag.CommandLine.Output(), rootHelp)
+		flag.PrintDefaults()
+	}
 
 	flag.Parse()
 
@@ -48,7 +64,17 @@ func run() error {
 		{
 			return Runway(ctx)
 		}
+	case "version":
+		{
+			fmt.Println(version())
+			return nil
+		}
 	default:
 		return fmt.Errorf("unknown command: %s", cmd)
 	}
+}
+
+func version() string {
+	info, _ := debug.ReadBuildInfo()
+	return info.Main.Version
 }
