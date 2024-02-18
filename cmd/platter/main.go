@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 )
@@ -14,9 +13,6 @@ func main() {
 }
 
 func run() error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
-
 	fmt.Println(`[{
   		"apiVersion": "apps/v1",
   		"kind": "Deployment",

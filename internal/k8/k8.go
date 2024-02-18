@@ -184,7 +184,6 @@ func (client Client) RemoveOrphans(ctx context.Context, release string) error {
 	}
 
 	var errs []error
-
 	for _, resource := range previousRevision.Resources {
 		if _, ok := set[canonical(resource)]; ok {
 			continue
@@ -228,11 +227,15 @@ func (client Client) getDynamicResourceInterface(resource *unstructured.Unstruct
 		Resource: resourceName,
 	}
 
-	namespace := cmp.Or(resource.GetNamespace(), "default")
+	namespace := getNamespace(resource)
 
 	return client.dynamic.Resource(gvr).Namespace(namespace), nil
 }
 
 func canonical(resource *unstructured.Unstructured) string {
-	return cmp.Or(resource.GetNamespace(), "default") + "/" + resource.GetKind() + "/" + resource.GetName()
+	return getNamespace(resource) + "/" + resource.GetKind() + "/" + resource.GetName()
+}
+
+func getNamespace(resource *unstructured.Unstructured) string {
+	return cmp.Or(resource.GetNamespace(), "default")
 }
