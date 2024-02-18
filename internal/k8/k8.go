@@ -1,6 +1,7 @@
 package k8
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -52,13 +53,51 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 	}, nil
 }
 
-func (client Client) ApplyResource(ctx context.Context, resource *unstructured.Unstructured) error {
+func (client Client) ApplyResources(ctx context.Context, resources []*unstructured.Unstructured) error {
+	var errs []error
+	for _, resource := range resources {
+		if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: true}); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", canonical(resource), err))
+		}
+	}
+
+	if err := xerr.MultiErrOrderedFrom("dry run", errs...); err != nil {
+		return err
+	}
+
+	for _, resource := range resources {
+		if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: false}); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", canonical(resource), err))
+		}
+	}
+
+	return xerr.MultiErrOrderedFrom("", errs...)
+}
+
+type ApplyOpts struct {
+	DryRun bool
+}
+
+func (client Client) ApplyResource(ctx context.Context, resource *unstructured.Unstructured, opts ApplyOpts) error {
 	resourceInterface, err := client.getDynamicResourceInterface(resource)
 	if err != nil {
 		return fmt.Errorf("failed to resolve resource: %w", err)
 	}
 
-	_, err = resourceInterface.Apply(ctx, resource.GetName(), resource, metav1.ApplyOptions{FieldManager: "halloumi"})
+	_, err = resourceInterface.Apply(
+		ctx,
+		resource.GetName(),
+		resource,
+		metav1.ApplyOptions{
+			FieldManager: "halloumi",
+			DryRun: func() []string {
+				if opts.DryRun {
+					return []string{metav1.DryRunAll}
+				}
+				return nil
+			}(),
+		},
+	)
 	return err
 }
 
@@ -134,10 +173,6 @@ func (client Client) RemoveOrphans(ctx context.Context, release string) error {
 		return err
 	}
 
-	canonical := func(resource *unstructured.Unstructured) string {
-		return resource.GetNamespace() + "/" + resource.GetKind() + "/" + resource.GetName()
-	}
-
 	set := map[string]struct{}{}
 	for _, resource := range currentRevision.Resources {
 		set[canonical(resource)] = struct{}{}
@@ -193,10 +228,11 @@ func (client Client) getDynamicResourceInterface(resource *unstructured.Unstruct
 		Resource: resourceName,
 	}
 
-	namespace := resource.GetNamespace()
-	if namespace == "" {
-		namespace = "default"
-	}
+	namespace := cmp.Or(resource.GetNamespace(), "default")
 
 	return client.dynamic.Resource(gvr).Namespace(namespace), nil
+}
+
+func canonical(resource *unstructured.Unstructured) string {
+	return cmp.Or(resource.GetNamespace(), "default") + "/" + resource.GetKind() + "/" + resource.GetName()
 }

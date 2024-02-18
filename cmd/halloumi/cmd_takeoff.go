@@ -95,10 +95,8 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to instantiate k8 client: %w", err)
 	}
 
-	for _, resource := range resources {
-		if err := client.ApplyResource(ctx, resource); err != nil {
-			return fmt.Errorf("failed to apply resource: %w", err)
-		}
+	if err := client.ApplyResources(ctx, resources); err != nil {
+		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
 	if err := client.MakeRevision(ctx, params.ReleaseName, resources); err != nil {

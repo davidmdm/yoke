@@ -41,7 +41,7 @@ func run() error {
   		        {
   		          "name": "web-app",
   		          "image": "alpine:latest",
-  		          "command": ["watch", "echo", "hello"]
+  		          "command": ["watch", "echo", "hello", "world", "yes?"]
   		        }
   		      ]
   		    }
