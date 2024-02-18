@@ -26,9 +26,10 @@ import (
 
 type TakeoffParams struct {
 	GlobalSettings
-	ReleaseName string
-	PlatterPath string
-	PlatterArgs []string
+	ReleaseName   string
+	PlatterPath   string
+	PlatterSource io.Reader
+	PlatterArgs   []string
 }
 
 //go:embed cmd_takeoff_help.txt
@@ -38,7 +39,7 @@ func init() {
 	takeoffHelp = strings.TrimSpace(internal.Colorize(takeoffHelp))
 }
 
-func GetTakeoffParams(settings GlobalSettings, args []string) (*TakeoffParams, error) {
+func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) (*TakeoffParams, error) {
 	flagset := flag.NewFlagSet("takeoff", flag.ExitOnError)
 
 	flagset.Usage = func() {
@@ -46,7 +47,10 @@ func GetTakeoffParams(settings GlobalSettings, args []string) (*TakeoffParams, e
 		flagset.PrintDefaults()
 	}
 
-	params := TakeoffParams{GlobalSettings: settings}
+	params := TakeoffParams{
+		GlobalSettings: settings,
+		PlatterSource:  source,
+	}
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
 
@@ -60,7 +64,7 @@ func GetTakeoffParams(settings GlobalSettings, args []string) (*TakeoffParams, e
 	if params.ReleaseName == "" {
 		return nil, fmt.Errorf("release is required as first positional arg")
 	}
-	if params.PlatterPath == "" {
+	if params.PlatterSource == nil && params.PlatterPath == "" {
 		return nil, fmt.Errorf("platter-path is required as second position arg")
 	}
 
@@ -68,17 +72,28 @@ func GetTakeoffParams(settings GlobalSettings, args []string) (*TakeoffParams, e
 }
 
 func TakeOff(ctx context.Context, params TakeoffParams) error {
-	wasm, err := LoadWasm(ctx, params.PlatterPath)
+	output, err := func() ([]byte, error) {
+		if params.PlatterSource != nil {
+			return io.ReadAll(params.PlatterSource)
+		}
+
+		wasm, err := LoadWasm(ctx, params.PlatterPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read wasm program: %w", err)
+		}
+
+		output, err := wasi.Execute(ctx, wasm, params.ReleaseName, params.PlatterArgs...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute wasm: %w", err)
+		}
+
+		return output, nil
+	}()
 	if err != nil {
-		return fmt.Errorf("failed to read wasm program: %w", err)
+		return fmt.Errorf("failed to load platter: %w", err)
 	}
 
-	output, err := wasi.Execute(ctx, wasm, params.ReleaseName, params.PlatterArgs...)
-	if err != nil {
-		return fmt.Errorf("failed to execute wasm: %w", err)
-	}
-
-	var resources []*unstructured.Unstructured
+	var resources internal.List[*unstructured.Unstructured]
 	if err := json.Unmarshal(output, &resources); err != nil {
 		return fmt.Errorf("failed to unmarshal raw resources: %w", err)
 	}

@@ -13,7 +13,7 @@ func main() {
 }
 
 func run() error {
-	fmt.Println(`[{
+	fmt.Println(`{
   		"apiVersion": "apps/v1",
   		"kind": "Deployment",
   		"metadata": {
@@ -37,13 +37,13 @@ func run() error {
   		        {
   		          "name": "web-app",
   		          "image": "alpine:latest",
-  		          "command": ["watch", "echo", "hello", "world", "yes?"]
+  		          "command": ["watch", "echo", "hello", "world", "no"]
   		        }
   		      ]
   		    }
   		  }
   		}
-	}]`)
+	}`)
 
 	return nil
 }

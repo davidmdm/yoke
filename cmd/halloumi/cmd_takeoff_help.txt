@@ -13,4 +13,10 @@
   # deploy a remote platter
   halloumi takeoff my-release https://github.com/my_org/infra/releases/v1.2.3-release.wasm
 
+  # deploy a platter from a file
+  halloumi takeoff my-release < resources.json
+
+  # deploy a platter from a unix pipe
+  generate-resources.sh | halloumi takeoff my-releae
+
 !cyan Flags:

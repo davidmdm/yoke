@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/davidmdm/halloumi/internal"
 	"github.com/davidmdm/x/xcontext"
+	"golang.org/x/term"
 )
 
 func main() {
@@ -51,7 +53,11 @@ func run() error {
 	switch cmd := flag.Arg(0); cmd {
 	case "takeoff", "up", "deploy":
 		{
-			params, err := GetTakeoffParams(settings, flag.Args()[1:])
+			var source io.Reader
+			if !term.IsTerminal(int(os.Stdin.Fd())) {
+				source = os.Stdin
+			}
+			params, err := GetTakeoffParams(settings, source, flag.Args()[1:])
 			if err != nil {
 				return err
 			}
