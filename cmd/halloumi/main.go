@@ -38,6 +38,7 @@ func run() error {
 	flag.Usage = func() {
 		fmt.Fprintln(flag.CommandLine.Output(), rootHelp)
 		flag.PrintDefaults()
+		fmt.Fprintln(os.Stderr)
 	}
 
 	flag.Parse()
