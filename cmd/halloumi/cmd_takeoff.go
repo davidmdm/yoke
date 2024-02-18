@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/davidmdm/x/xerr"
@@ -94,7 +94,7 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 	}
 
 	var resources internal.List[*unstructured.Unstructured]
-	if err := json.Unmarshal(output, &resources); err != nil {
+	if err := yaml.Unmarshal(output, &resources); err != nil {
 		return fmt.Errorf("failed to unmarshal raw resources: %w", err)
 	}
 

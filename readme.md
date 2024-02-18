@@ -8,7 +8,7 @@ Halloumi is a Helm-inspired infrastructure-as-code (IaC) package deployer.
 
 The philosophy behind Halloumi is that Kubernetes packages should be described via code. Programming environments have control flow, test frameworks, static typing, documentation, error management, and versioning. They are ideal for building contracts and enforcing them.
 
-Halloumi deploys "platters" to Kubernetes (think helm charts or packages). A platter is a wasm executable that outputs the Kubernetes resources making up the package as JSON to stdout.
+Halloumi deploys "platters" to Kubernetes (think helm charts or packages). A platter is a wasm executable that outputs the Kubernetes resources making up the package as JSON/YAML to stdout.
 
 Halloumi embeds a pure-Go wasm runtime (wazero) and deploys your platter to Kubernetes. It keeps track of the different revisions for any given release and provides capabilities such as rollbacks and inspection. For ArgoCD compatibility, it can render the platter to the filesystem as raw YAML resources.
 

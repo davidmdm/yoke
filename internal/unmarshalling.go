@@ -1,6 +1,8 @@
 package internal
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type List[T any] []T
 
