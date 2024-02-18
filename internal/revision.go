@@ -1,6 +1,9 @@
 package internal
 
 import (
+	"cmp"
+	"strings"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -25,4 +28,12 @@ func AddHallmouiMetadata(resources []*unstructured.Unstructured, release string)
 
 		resource.SetLabels(labels)
 	}
+}
+
+func Canonical(resource *unstructured.Unstructured) string {
+	return strings.ToLower(Namespace(resource) + "." + resource.GetKind() + "." + resource.GetName())
+}
+
+func Namespace(resource *unstructured.Unstructured) string {
+	return cmp.Or(resource.GetNamespace(), "default")
 }

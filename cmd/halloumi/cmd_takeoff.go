@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -30,6 +31,7 @@ type TakeoffParams struct {
 	PlatterPath   string
 	PlatterSource io.Reader
 	PlatterArgs   []string
+	OutputDir     string
 }
 
 //go:embed cmd_takeoff_help.txt
@@ -53,6 +55,7 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 	}
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
+	flagset.StringVar(&params.OutputDir, "outDir", "", "if present outputs platter resources to outDir instead of applying to k8")
 
 	args, params.PlatterArgs = internal.CutArgs(args)
 
@@ -99,6 +102,13 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 	}
 
 	internal.AddHallmouiMetadata(resources, params.ReleaseName)
+
+	if params.OutputDir != "" {
+		if err := ExportToFS(params.OutputDir, params.ReleaseName, resources); err != nil {
+			return fmt.Errorf("failed to export release: %w", err)
+		}
+		return nil
+	}
 
 	restcfg, err := clientcmd.BuildConfigFromFlags("", params.KubeConfigPath)
 	if err != nil {
@@ -149,4 +159,26 @@ func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
 	}()
 
 	return io.ReadAll(resp.Body)
+}
+
+func ExportToFS(dir, release string, resources []*unstructured.Unstructured) error {
+	root := filepath.Join(dir, release)
+
+	if err := os.RemoveAll(root); err != nil {
+		return fmt.Errorf("failed remove previous platter export: %w", err)
+	}
+
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return fmt.Errorf("failed to create release output directory: %w", err)
+	}
+
+	var errs []error
+	for _, resource := range resources {
+		path := filepath.Join(root, internal.Canonical(resource)+".yaml")
+		if err := internal.WriteYAML(path, resource.Object); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return xerr.MultiErrFrom("", errs...)
 }

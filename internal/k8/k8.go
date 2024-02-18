@@ -1,7 +1,6 @@
 package k8
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -57,7 +56,7 @@ func (client Client) ApplyResources(ctx context.Context, resources []*unstructur
 	var errs []error
 	for _, resource := range resources {
 		if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: true}); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", canonical(resource), err))
+			errs = append(errs, fmt.Errorf("%s: %w", internal.Canonical(resource), err))
 		}
 	}
 
@@ -67,7 +66,7 @@ func (client Client) ApplyResources(ctx context.Context, resources []*unstructur
 
 	for _, resource := range resources {
 		if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: false}); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", canonical(resource), err))
+			errs = append(errs, fmt.Errorf("%s: %w", internal.Canonical(resource), err))
 		}
 	}
 
@@ -175,7 +174,7 @@ func (client Client) RemoveOrphans(ctx context.Context, release string) error {
 
 	set := map[string]struct{}{}
 	for _, resource := range currentRevision.Resources {
-		set[canonical(resource)] = struct{}{}
+		set[internal.Canonical(resource)] = struct{}{}
 	}
 
 	var previousRevision internal.Revision
@@ -185,18 +184,18 @@ func (client Client) RemoveOrphans(ctx context.Context, release string) error {
 
 	var errs []error
 	for _, resource := range previousRevision.Resources {
-		if _, ok := set[canonical(resource)]; ok {
+		if _, ok := set[internal.Canonical(resource)]; ok {
 			continue
 		}
 
 		resourceInterface, err := client.getDynamicResourceInterface(resource)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to resolve resource %s: %w", canonical(resource), err))
+			errs = append(errs, fmt.Errorf("failed to resolve resource %s: %w", internal.Canonical(resource), err))
 			continue
 		}
 
 		if err := resourceInterface.Delete(ctx, resource.GetName(), metav1.DeleteOptions{}); err != nil {
-			errs = append(errs, fmt.Errorf("failed to delete %s: %w", canonical(resource), err))
+			errs = append(errs, fmt.Errorf("failed to delete %s: %w", internal.Canonical(resource), err))
 			continue
 		}
 	}
@@ -227,15 +226,7 @@ func (client Client) getDynamicResourceInterface(resource *unstructured.Unstruct
 		Resource: resourceName,
 	}
 
-	namespace := getNamespace(resource)
+	namespace := internal.Namespace(resource)
 
 	return client.dynamic.Resource(gvr).Namespace(namespace), nil
-}
-
-func canonical(resource *unstructured.Unstructured) string {
-	return getNamespace(resource) + "/" + resource.GetKind() + "/" + resource.GetName()
-}
-
-func getNamespace(resource *unstructured.Unstructured) string {
-	return cmp.Or(resource.GetNamespace(), "default")
 }

@@ -67,10 +67,6 @@ func run() error {
 		{
 			return Descent(ctx)
 		}
-	case "runway", "render", "export":
-		{
-			return Runway(ctx)
-		}
 	case "version":
 		{
 			fmt.Println(version())
