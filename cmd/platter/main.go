@@ -16,36 +16,51 @@ func main() {
 }
 
 func run() error {
-	json.NewEncoder(os.Stdout).Encode([]any{
-		k8.Deployment{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-			Metadata: k8.Metadata{
-				Name:      "sample-app",
-				Namespace: "default",
-			},
-			Spec: k8.DeploymentSpec{
-				Replicas: 3,
-				Selector: k8.Selector{
-					MatchLabels: map[string]string{"app": "sample-app"},
-				},
-				Template: k8.PodTemplateSpec{
-					Metadata: k8.TemplateMetadata{
-						Labels: map[string]string{"app": "sample-app"},
-					},
-					Spec: k8.PodSpec{
-						Containers: []k8.Container{
-							{
-								Name:    "web-app",
-								Image:   "alpine:latest",
-								Command: []string{"watch", "echo", "hello", "world"},
-							},
+	name := "sample-app"
+	labels := map[string]string{"app": name}
+
+	deployment := k8.Deployment{
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+		Metadata: k8.Metadata{
+			Name:      name,
+			Namespace: "default",
+		},
+		Spec: k8.DeploymentSpec{
+			Replicas: 3,
+			Selector: k8.Selector{MatchLabels: labels},
+			Template: k8.PodTemplateSpec{
+				Metadata: k8.TemplateMetadata{Labels: labels},
+				Spec: k8.PodSpec{
+					Containers: []k8.Container{
+						{
+							Name:    "web-app",
+							Image:   "alpine:latest",
+							Command: []string{"watch", "echo", "hello", "world"},
 						},
 					},
 				},
 			},
 		},
-	})
+	}
 
-	return nil
+	service := k8.Service{
+		APIVersion: "v1",
+		Kind:       "Service",
+		Metadata:   k8.Metadata{Name: name},
+		Spec: k8.ServiceSpec{
+			Selector: labels,
+			Ports: []k8.ServicePort{
+				{
+					Protocol:   "TCP",
+					Port:       80,
+					TargetPort: 3000,
+				},
+			},
+		},
+	}
+
+	return json.
+		NewEncoder(os.Stdout).
+		Encode([]any{deployment, service})
 }
