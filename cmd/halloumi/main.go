@@ -19,6 +19,9 @@ import (
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error()+"\n")
+		if internal.IsWarning(err) {
+			return
+		}
 		os.Exit(1)
 	}
 }

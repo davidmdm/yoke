@@ -146,44 +146,14 @@ func (client Client) MakeRevision(ctx context.Context, release string, resources
 	return err
 }
 
-func (client Client) RemoveOrphans(ctx context.Context, release string) error {
-	name := "halloumi-" + release
-
-	configmap, err := client.clientset.
-		CoreV1().
-		ConfigMaps("kube-system").
-		Get(ctx, name, metav1.GetOptions{})
-
-	if kerrors.IsNotFound(err) {
-		return nil
-	}
-
-	if err != nil {
-		return err
-	}
-
-	current, _ := strconv.Atoi(configmap.Data["current"])
-	if current == 1 {
-		return nil
-	}
-
-	var currentRevision internal.Revision
-	if err := json.Unmarshal([]byte(configmap.Data[strconv.Itoa(current)]), &currentRevision); err != nil {
-		return err
-	}
-
-	set := map[string]struct{}{}
-	for _, resource := range currentRevision.Resources {
+func (client Client) RemoveOrphans(ctx context.Context, previous, current []*unstructured.Unstructured) error {
+	set := make(map[string]struct{})
+	for _, resource := range current {
 		set[internal.Canonical(resource)] = struct{}{}
 	}
 
-	var previousRevision internal.Revision
-	if err := json.Unmarshal([]byte(configmap.Data[strconv.Itoa(current-1)]), &previousRevision); err != nil {
-		return err
-	}
-
 	var errs []error
-	for _, resource := range previousRevision.Resources {
+	for _, resource := range previous {
 		if _, ok := set[internal.Canonical(resource)]; ok {
 			continue
 		}
@@ -201,6 +171,30 @@ func (client Client) RemoveOrphans(ctx context.Context, release string) error {
 	}
 
 	return xerr.MultiErrOrderedFrom("", errs...)
+}
+
+func (client Client) GetCurrentResources(ctx context.Context, release string) ([]*unstructured.Unstructured, error) {
+	name := "halloumi-" + release
+
+	configmap, err := client.clientset.
+		CoreV1().
+		ConfigMaps("kube-system").
+		Get(ctx, name, metav1.GetOptions{})
+
+	if kerrors.IsNotFound(err) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	var currentRevision internal.Revision
+	if err := json.Unmarshal([]byte(configmap.Data[configmap.Data["current"]]), &currentRevision); err != nil {
+		return nil, err
+	}
+
+	return currentRevision.Resources, nil
 }
 
 func (client Client) getDynamicResourceInterface(resource *unstructured.Unstructured) (dynamic.ResourceInterface, error) {

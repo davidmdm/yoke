@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -124,6 +125,15 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to instantiate k8 client: %w", err)
 	}
 
+	previous, err := client.GetCurrentResources(ctx, params.Release)
+	if err != nil {
+		return fmt.Errorf("failed to get initial revision state: %w", err)
+	}
+
+	if reflect.DeepEqual(previous, []*unstructured.Unstructured(resources)) {
+		return internal.Warning("resources are the same as previous revision: skipping takeoff")
+	}
+
 	if err := client.ApplyResources(ctx, resources); err != nil {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
@@ -132,7 +142,7 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to create revision: %w", err)
 	}
 
-	if err := client.RemoveOrphans(ctx, params.Release); err != nil {
+	if err := client.RemoveOrphans(ctx, previous, resources); err != nil {
 		return fmt.Errorf("failed to remove orhpans: %w", err)
 	}
 

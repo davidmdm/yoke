@@ -21,7 +21,7 @@ func run() error {
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Metadata: k8.Metadata{
-				Name:      "sample-app-prod",
+				Name:      "sample-app",
 				Namespace: "default",
 			},
 			Spec: k8.DeploymentSpec{
