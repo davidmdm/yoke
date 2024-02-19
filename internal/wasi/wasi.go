@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"io"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
@@ -12,7 +13,7 @@ import (
 	"github.com/davidmdm/x/xerr"
 )
 
-func Execute(ctx context.Context, wasm []byte, release string, args ...string) (output []byte, err error) {
+func Execute(ctx context.Context, wasm []byte, release string, stdin io.Reader, args ...string) (output []byte, err error) {
 	cfg := wazero.
 		NewRuntimeConfig().
 		WithCloseOnContextDone(true)
@@ -46,6 +47,10 @@ func Execute(ctx context.Context, wasm []byte, release string, args ...string) (
 		WithSysNanotime().
 		WithSysWalltime().
 		WithArgs(append([]string{release}, args...)...)
+
+	if stdin != nil {
+		moduleCfg = moduleCfg.WithStdin(stdin)
+	}
 
 	if _, err := wasi.InstantiateModule(ctx, mod, moduleCfg); err != nil {
 		details := stderr.String()

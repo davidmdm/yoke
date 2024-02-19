@@ -25,13 +25,17 @@ import (
 	"github.com/davidmdm/halloumi/internal/wasi"
 )
 
+type TakeoffPlatterParams struct {
+	Path  string
+	Input io.Reader
+	Args  []string
+}
+
 type TakeoffParams struct {
 	GlobalSettings
-	ReleaseName   string
-	PlatterPath   string
-	PlatterSource io.Reader
-	PlatterArgs   []string
-	OutputDir     string
+	Release   string
+	Platter   TakeoffPlatterParams
+	OutputDir string
 }
 
 //go:embed cmd_takeoff_help.txt
@@ -51,23 +55,23 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 
 	params := TakeoffParams{
 		GlobalSettings: settings,
-		PlatterSource:  source,
+		Platter:        TakeoffPlatterParams{Input: source},
 	}
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
 	flagset.StringVar(&params.OutputDir, "outDir", "", "if present outputs platter resources to outDir instead of applying to k8")
 
-	args, params.PlatterArgs = internal.CutArgs(args)
+	args, params.Platter.Args = internal.CutArgs(args)
 
 	flagset.Parse(args)
 
-	params.ReleaseName = flagset.Arg(0)
-	params.PlatterPath = flagset.Arg(1)
+	params.Release = flagset.Arg(0)
+	params.Platter.Path = flagset.Arg(1)
 
-	if params.ReleaseName == "" {
+	if params.Release == "" {
 		return nil, fmt.Errorf("release is required as first positional arg")
 	}
-	if params.PlatterSource == nil && params.PlatterPath == "" {
+	if params.Platter.Input == nil && params.Platter.Path == "" {
 		return nil, fmt.Errorf("platter-path is required as second position arg")
 	}
 
@@ -76,16 +80,16 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 
 func TakeOff(ctx context.Context, params TakeoffParams) error {
 	output, err := func() ([]byte, error) {
-		if params.PlatterSource != nil {
-			return io.ReadAll(params.PlatterSource)
+		if params.Platter.Input != nil && params.Platter.Path == "" {
+			return io.ReadAll(params.Platter.Input)
 		}
 
-		wasm, err := LoadWasm(ctx, params.PlatterPath)
+		wasm, err := LoadWasm(ctx, params.Platter.Path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read wasm program: %w", err)
 		}
 
-		output, err := wasi.Execute(ctx, wasm, params.ReleaseName, params.PlatterArgs...)
+		output, err := wasi.Execute(ctx, wasm, params.Release, params.Platter.Input, params.Platter.Args...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to execute wasm: %w", err)
 		}
@@ -101,10 +105,10 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to unmarshal raw resources: %w", err)
 	}
 
-	internal.AddHallmouiMetadata(resources, params.ReleaseName)
+	internal.AddHallmouiMetadata(resources, params.Release)
 
 	if params.OutputDir != "" {
-		if err := ExportToFS(params.OutputDir, params.ReleaseName, resources); err != nil {
+		if err := ExportToFS(params.OutputDir, params.Release, resources); err != nil {
 			return fmt.Errorf("failed to export release: %w", err)
 		}
 		return nil
@@ -124,11 +128,11 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
-	if err := client.MakeRevision(ctx, params.ReleaseName, resources); err != nil {
+	if err := client.MakeRevision(ctx, params.Release, resources); err != nil {
 		return fmt.Errorf("failed to create revision: %w", err)
 	}
 
-	if err := client.RemoveOrphans(ctx, params.ReleaseName); err != nil {
+	if err := client.RemoveOrphans(ctx, params.Release); err != nil {
 		return fmt.Errorf("failed to remove orhpans: %w", err)
 	}
 
