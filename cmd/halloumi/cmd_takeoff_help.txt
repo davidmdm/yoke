@@ -3,6 +3,9 @@
 !cyan Usage: 
   halloumi takeoff [flags] <release-name> <platter-path>
 
+!cyan Aliases:
+  apply, up
+
 !cyan Examples:
   # deploy a local platter
   halloumi takeoff my-release ./main.wasm

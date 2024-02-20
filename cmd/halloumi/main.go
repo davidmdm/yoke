@@ -54,7 +54,7 @@ func run() error {
 	}
 
 	switch cmd := flag.Arg(0); cmd {
-	case "takeoff", "up", "deploy":
+	case "takeoff", "up", "apply":
 		{
 			var source io.Reader
 			if !term.IsTerminal(int(os.Stdin.Fd())) {

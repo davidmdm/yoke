@@ -14,7 +14,7 @@ Halloumi embeds a pure-Go wasm runtime (wazero) and deploys your platter to Kube
 
 ## Theme
 
-Every Kubernetes related project needs a theme. Although K8 has historically inspired nautical themes, Halloumi is a slight departure from the norm as it tries to move away from the YAML centric world-view of Kubernetes. Therefore Halloumi has an aviation related theme. Core commands, for example, are named `takeoff`, `descent`, and `runway`. However their less whimsical aliases exist as well: `up / deploy`, `down / rollback`, and `render / export`.
+Every Kubernetes related project needs a theme. Although K8 has historically inspired nautical themes, Halloumi is a slight departure from the norm as it tries to move away from the YAML centric world-view of Kubernetes. Therefore Halloumi has an aviation related theme. Core commands, for example, are named `takeoff`, `descent`, and `runway`. However their less whimsical aliases exist as well: `up / apply`, `down / rollback`, and `render / export`.
 
 ## Installation
 

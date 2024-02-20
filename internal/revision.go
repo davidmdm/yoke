@@ -17,21 +17,29 @@ func AddHallmouiMetadata(resources []*unstructured.Unstructured, release string)
 		if annotations == nil {
 			annotations = make(map[string]string)
 		}
-		annotations["managed-by"] = "halloumi"
+		annotations["halloumi/managed-by"] = "halloumi"
 		resource.SetAnnotations(annotations)
 
 		labels := resource.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string)
 		}
-		labels["halloumi-release"] = release
+		labels["halloumi/release"] = release
 
 		resource.SetLabels(labels)
 	}
 }
 
 func Canonical(resource *unstructured.Unstructured) string {
-	return strings.ToLower(Namespace(resource) + "." + resource.GetKind() + "." + resource.GetName())
+	return strings.ToLower(strings.Join(
+		[]string{
+			Namespace(resource),
+			strings.ReplaceAll(resource.GetAPIVersion(), "/", "."),
+			resource.GetKind(),
+			resource.GetName(),
+		},
+		".",
+	))
 }
 
 func Namespace(resource *unstructured.Unstructured) string {
