@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
+	"strconv"
 
 	k8 "github.com/davidmdm/halloumi/pkg/utils/resource"
 )
@@ -19,6 +21,13 @@ func run() error {
 	name := "sample-app"
 	labels := map[string]string{"app": name}
 
+	flag.Parse()
+
+	replicas, _ := strconv.Atoi(flag.Arg(0))
+	if replicas == 0 {
+		replicas = 2
+	}
+
 	deployment := k8.Deployment{
 		APIVersion: "apps/v1",
 		Kind:       "Deployment",
@@ -27,7 +36,7 @@ func run() error {
 			Namespace: "default",
 		},
 		Spec: k8.DeploymentSpec{
-			Replicas: 3,
+			Replicas: int32(replicas),
 			Selector: k8.Selector{MatchLabels: labels},
 			Template: k8.PodTemplateSpec{
 				Metadata: k8.TemplateMetadata{Labels: labels},
@@ -36,7 +45,7 @@ func run() error {
 						{
 							Name:    "web-app",
 							Image:   "alpine:latest",
-							Command: []string{"watch", "echo", "hello", "world"},
+							Command: []string{"watch", "echo", "hello", "riccy"},
 						},
 					},
 				},
@@ -44,7 +53,7 @@ func run() error {
 		},
 	}
 
-	service := k8.Service{
+	_ = k8.Service{
 		APIVersion: "v1",
 		Kind:       "Service",
 		Metadata:   k8.Metadata{Name: name},
@@ -62,5 +71,5 @@ func run() error {
 
 	return json.
 		NewEncoder(os.Stdout).
-		Encode([]any{deployment, service})
+		Encode([]any{deployment})
 }
