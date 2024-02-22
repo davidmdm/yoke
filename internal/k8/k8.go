@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -105,44 +104,45 @@ func (client Client) MakeRevision(ctx context.Context, release string, resources
 		CoreV1().
 		ConfigMaps("kube-system")
 
-	data, err := json.Marshal(internal.Revision{Resources: resources})
-	if err != nil {
-		return err
-	}
-
 	name := "halloumi-" + release
 
-	revisions, err := configmaps.Get(ctx, name, metav1.GetOptions{})
+	configMap, err := configmaps.Get(ctx, name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
-		_, err := configmaps.Create(
-			ctx,
-			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: name},
-				Data: map[string]string{
-					"current": "1",
-					"1":       string(data),
-				},
-			},
-			metav1.CreateOptions{FieldManager: "halloumi"},
-		)
+		var revisions internal.Revisions
+		revisions.Add(resources)
+
+		data, err := json.Marshal(revisions)
+		if err != nil {
+			return err
+		}
+
+		config := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Data:       map[string]string{"revisions": string(data)},
+		}
+
+		_, err = configmaps.Create(ctx, config, metav1.CreateOptions{FieldManager: "halloumi"})
 		return err
 	}
 	if err != nil {
 		return fmt.Errorf("failed to lookup revision for %s: %w", release, err)
 	}
 
-	var latest int
-	for key := range revisions.Data {
-		if version, _ := strconv.Atoi(key); version > latest {
-			latest = version
-		}
+	var revisions internal.Revisions
+	if err := json.Unmarshal([]byte(configMap.Data["revisions"]), &revisions); err != nil {
+		return fmt.Errorf("failed to parse revision history: %w", err)
 	}
 
-	nextVersion := strconv.Itoa(latest + 1)
-	revisions.Data[nextVersion] = string(data)
-	revisions.Data["current"] = nextVersion
+	revisions.Add(resources)
 
-	_, err = configmaps.Update(ctx, revisions, metav1.UpdateOptions{FieldManager: "halloumi"})
+	data, err := json.Marshal(revisions)
+	if err != nil {
+		return err
+	}
+
+	configMap.Data["revisions"] = string(data)
+
+	_, err = configmaps.Update(ctx, configMap, metav1.UpdateOptions{FieldManager: "halloumi"})
 	return err
 }
 
@@ -174,27 +174,11 @@ func (client Client) RemoveOrphans(ctx context.Context, previous, current []*uns
 }
 
 func (client Client) GetCurrentResources(ctx context.Context, release string) ([]*unstructured.Unstructured, error) {
-	name := "halloumi-" + release
-
-	configmap, err := client.clientset.
-		CoreV1().
-		ConfigMaps("kube-system").
-		Get(ctx, name, metav1.GetOptions{})
-
-	if kerrors.IsNotFound(err) {
-		return nil, nil
-	}
-
+	revisions, err := client.getRevisions(ctx, release)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get revision history: %w", err)
 	}
-
-	var currentRevision internal.Revision
-	if err := json.Unmarshal([]byte(configmap.Data[configmap.Data["current"]]), &currentRevision); err != nil {
-		return nil, err
-	}
-
-	return currentRevision.Resources, nil
+	return revisions.CurrentResources(), nil
 }
 
 func (client Client) getDynamicResourceInterface(resource *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
@@ -223,4 +207,23 @@ func (client Client) getDynamicResourceInterface(resource *unstructured.Unstruct
 	namespace := internal.Namespace(resource)
 
 	return client.dynamic.Resource(gvr).Namespace(namespace), nil
+}
+
+func (client Client) getRevisions(ctx context.Context, release string) (*internal.Revisions, error) {
+	name := "halloumi-" + release
+
+	configMap, err := client.clientset.CoreV1().ConfigMaps("kube-system").Get(ctx, name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		return new(internal.Revisions), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var revisions internal.Revisions
+	if err := json.Unmarshal([]byte(configMap.Data["revisions"]), &revisions); err != nil {
+		return nil, err
+	}
+
+	return &revisions, nil
 }

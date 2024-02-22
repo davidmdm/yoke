@@ -7,7 +7,30 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+type Revisions struct {
+	Total       int        `json:"total"`
+	History     []Revision `json:"history"`
+	ActiveIndex int        `json:"activeIndex"`
+}
+
+func (revisions *Revisions) Add(resources []*unstructured.Unstructured) {
+	revisions.History = append(revisions.History, Revision{
+		ID:        revisions.Total + 1,
+		Resources: resources,
+	})
+	revisions.ActiveIndex = len(revisions.History) - 1
+	revisions.Total++
+}
+
+func (revisions Revisions) CurrentResources() []*unstructured.Unstructured {
+	if len(revisions.History) == 0 {
+		return nil
+	}
+	return revisions.History[revisions.ActiveIndex].Resources
+}
+
 type Revision struct {
+	ID        int                          `json:"id"`
 	Resources []*unstructured.Unstructured `json:"resources"`
 }
 
