@@ -66,9 +66,17 @@ func run() error {
 			}
 			return TakeOff(ctx, *params)
 		}
-	case "descent", "down", "rollback":
+	case "descent", "down", "restore":
 		{
-			return Descent(ctx)
+			params, err := GetDescentfParams(settings, flag.Args()[1:])
+			if err != nil {
+				return err
+			}
+			return Descent(ctx, *params)
+		}
+	case "mayday", "delete":
+		{
+			return fmt.Errorf("not implemented")
 		}
 	case "version":
 		{

@@ -174,11 +174,63 @@ func (client Client) RemoveOrphans(ctx context.Context, previous, current []*uns
 }
 
 func (client Client) GetCurrentResources(ctx context.Context, release string) ([]*unstructured.Unstructured, error) {
-	revisions, err := client.getRevisions(ctx, release)
+	revisions, err := client.GetRevisions(ctx, release)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get revision history: %w", err)
 	}
 	return revisions.CurrentResources(), nil
+}
+
+func (client Client) GetRevisions(ctx context.Context, release string) (*internal.Revisions, error) {
+	name := "halloumi-" + release
+
+	configMap, err := client.clientset.CoreV1().ConfigMaps("kube-system").Get(ctx, name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		return new(internal.Revisions), nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var revisions internal.Revisions
+	if err := json.Unmarshal([]byte(configMap.Data["revisions"]), &revisions); err != nil {
+		return nil, err
+	}
+
+	return &revisions, nil
+}
+
+func (client Client) UpsertRevisions(ctx context.Context, release string, revisions *internal.Revisions) error {
+	name := "halloumi-" + release
+
+	configMaps := client.clientset.CoreV1().ConfigMaps("kube-system")
+
+	data, err := json.Marshal(revisions)
+	if err != nil {
+		return err
+	}
+
+	configMap, err := configMaps.Get(ctx, name, metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		_, err := configMaps.Create(
+			ctx,
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Data:       map[string]string{"revisions": string(data)},
+			},
+			metav1.CreateOptions{FieldManager: "halloumi"},
+		)
+		return err
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to get revisions: %w", err)
+	}
+
+	configMap.Data["revisions"] = string(data)
+
+	_, err = configMaps.Update(ctx, configMap, metav1.UpdateOptions{FieldManager: "halloumu"})
+	return err
 }
 
 func (client Client) getDynamicResourceInterface(resource *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
@@ -207,23 +259,4 @@ func (client Client) getDynamicResourceInterface(resource *unstructured.Unstruct
 	namespace := internal.Namespace(resource)
 
 	return client.dynamic.Resource(gvr).Namespace(namespace), nil
-}
-
-func (client Client) getRevisions(ctx context.Context, release string) (*internal.Revisions, error) {
-	name := "halloumi-" + release
-
-	configMap, err := client.clientset.CoreV1().ConfigMaps("kube-system").Get(ctx, name, metav1.GetOptions{})
-	if kerrors.IsNotFound(err) {
-		return new(internal.Revisions), nil
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var revisions internal.Revisions
-	if err := json.Unmarshal([]byte(configMap.Data["revisions"]), &revisions); err != nil {
-		return nil, err
-	}
-
-	return &revisions, nil
 }

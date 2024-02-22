@@ -9,7 +9,7 @@ Deploys "halloumi platters" to a kubernetes cluster.
 !cyan Available commands:
 takeoff   (aliases: up, apply)
 descent   (aliases: down, restore)
-runway    (aliases: render, export)
+mayday    (aliases: delete)
 version
 
 !cyan Global Flags:
