@@ -2,14 +2,23 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/davidmdm/halloumi/internal"
 	"github.com/davidmdm/halloumi/internal/k8"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+//go:embed cmd_descent_help.txt
+var descentHelp string
+
+func init() {
+	descentHelp = strings.TrimSpace(internal.Colorize(descentHelp))
+}
 
 type DescentParams struct {
 	GlobalSettings
@@ -21,7 +30,7 @@ func GetDescentfParams(settings GlobalSettings, args []string) (*DescentParams, 
 	flagset := flag.NewFlagSet("descent", flag.ExitOnError)
 
 	flagset.Usage = func() {
-		// fmt.Fprintln(flagset.Output(), takeoffHelp)
+		fmt.Fprintln(flagset.Output(), descentHelp)
 		flagset.PrintDefaults()
 	}
 
@@ -33,16 +42,16 @@ func GetDescentfParams(settings GlobalSettings, args []string) (*DescentParams, 
 
 	flagset.Parse(args)
 
-	params.Release = flag.Arg(0)
+	params.Release = flagset.Arg(0)
 	if params.Release == "" {
 		return nil, fmt.Errorf("release is required as first positional arg")
 	}
 
-	if len(flag.Args()) < 2 {
+	if len(flagset.Args()) < 2 {
 		return nil, fmt.Errorf("revision is required as second positional arg")
 	}
 
-	revisionID, err := strconv.Atoi(flag.Arg(0))
+	revisionID, err := strconv.Atoi(flagset.Arg(1))
 	if err != nil {
 		return nil, fmt.Errorf("revision must be an integer ID: %w", err)
 	}

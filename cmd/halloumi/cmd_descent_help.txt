@@ -1,0 +1,13 @@
+!yellow halloumi descent
+
+!cyan Usage: 
+  halloumi decent [flags] <release-name> <revision-id>
+
+!cyan Aliases:
+  restore
+
+!cyan Examples:
+  # restore state to revision history 42
+  halloumi descent my-release 42
+
+!cyan Flags:

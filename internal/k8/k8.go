@@ -99,53 +99,6 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 	return err
 }
 
-func (client Client) MakeRevision(ctx context.Context, release string, resources []*unstructured.Unstructured) error {
-	configmaps := client.clientset.
-		CoreV1().
-		ConfigMaps("kube-system")
-
-	name := "halloumi-" + release
-
-	configMap, err := configmaps.Get(ctx, name, metav1.GetOptions{})
-	if kerrors.IsNotFound(err) {
-		var revisions internal.Revisions
-		revisions.Add(resources)
-
-		data, err := json.Marshal(revisions)
-		if err != nil {
-			return err
-		}
-
-		config := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Name: name},
-			Data:       map[string]string{"revisions": string(data)},
-		}
-
-		_, err = configmaps.Create(ctx, config, metav1.CreateOptions{FieldManager: "halloumi"})
-		return err
-	}
-	if err != nil {
-		return fmt.Errorf("failed to lookup revision for %s: %w", release, err)
-	}
-
-	var revisions internal.Revisions
-	if err := json.Unmarshal([]byte(configMap.Data["revisions"]), &revisions); err != nil {
-		return fmt.Errorf("failed to parse revision history: %w", err)
-	}
-
-	revisions.Add(resources)
-
-	data, err := json.Marshal(revisions)
-	if err != nil {
-		return err
-	}
-
-	configMap.Data["revisions"] = string(data)
-
-	_, err = configmaps.Update(ctx, configMap, metav1.UpdateOptions{FieldManager: "halloumi"})
-	return err
-}
-
 func (client Client) RemoveOrphans(ctx context.Context, previous, current []*unstructured.Unstructured) error {
 	set := make(map[string]struct{})
 	for _, resource := range current {
@@ -171,14 +124,6 @@ func (client Client) RemoveOrphans(ctx context.Context, previous, current []*uns
 	}
 
 	return xerr.MultiErrOrderedFrom("", errs...)
-}
-
-func (client Client) GetCurrentResources(ctx context.Context, release string) ([]*unstructured.Unstructured, error) {
-	revisions, err := client.GetRevisions(ctx, release)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get revision history: %w", err)
-	}
-	return revisions.CurrentResources(), nil
 }
 
 func (client Client) GetRevisions(ctx context.Context, release string) (*internal.Revisions, error) {

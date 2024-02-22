@@ -125,10 +125,12 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to instantiate k8 client: %w", err)
 	}
 
-	previous, err := client.GetCurrentResources(ctx, params.Release)
+	revisions, err := client.GetRevisions(ctx, params.Release)
 	if err != nil {
-		return fmt.Errorf("failed to get initial revision state: %w", err)
+		return fmt.Errorf("failed to get revision history: %w", err)
 	}
+
+	previous := revisions.CurrentResources()
 
 	if reflect.DeepEqual(previous, []*unstructured.Unstructured(resources)) {
 		return internal.Warning("resources are the same as previous revision: skipping takeoff")
@@ -138,7 +140,9 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
-	if err := client.MakeRevision(ctx, params.Release, resources); err != nil {
+	revisions.Add(resources)
+
+	if err := client.UpsertRevisions(ctx, params.Release, revisions); err != nil {
 		return fmt.Errorf("failed to create revision: %w", err)
 	}
 
