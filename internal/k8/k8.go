@@ -16,11 +16,21 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/davidmdm/x/xerr"
 
 	"github.com/davidmdm/halloumi/internal"
 )
+
+const (
+	ResourceReleaseMapping = "halloumi-resource-release-mapping"
+	KeyRevisions           = "revisions"
+	NSKubeSystem           = "kube-system"
+	Halloumi               = "halloumi"
+)
+
+func releaseName(release string) string { return Halloumi + "-" + release }
 
 type Client struct {
 	dynamic   *dynamic.DynamicClient
@@ -87,7 +97,7 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 		resource.GetName(),
 		resource,
 		metav1.ApplyOptions{
-			FieldManager: "halloumi",
+			FieldManager: Halloumi,
 			DryRun: func() []string {
 				if opts.DryRun {
 					return []string{metav1.DryRunAll}
@@ -99,13 +109,14 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 	return err
 }
 
-func (client Client) RemoveOrphans(ctx context.Context, previous, current []*unstructured.Unstructured) error {
+func (client Client) RemoveOrphans(ctx context.Context, previous, current []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	set := make(map[string]struct{})
 	for _, resource := range current {
 		set[internal.Canonical(resource)] = struct{}{}
 	}
 
 	var errs []error
+	var removedResources []*unstructured.Unstructured
 	for _, resource := range previous {
 		if _, ok := set[internal.Canonical(resource)]; ok {
 			continue
@@ -121,15 +132,17 @@ func (client Client) RemoveOrphans(ctx context.Context, previous, current []*uns
 			errs = append(errs, fmt.Errorf("failed to delete %s: %w", internal.Canonical(resource), err))
 			continue
 		}
+
+		removedResources = append(removedResources, resource)
 	}
 
-	return xerr.MultiErrOrderedFrom("", errs...)
+	return removedResources, xerr.MultiErrOrderedFrom("", errs...)
 }
 
 func (client Client) GetRevisions(ctx context.Context, release string) (*internal.Revisions, error) {
-	name := "halloumi-" + release
+	name := releaseName(release)
 
-	configMap, err := client.clientset.CoreV1().ConfigMaps("kube-system").Get(ctx, name, metav1.GetOptions{})
+	configMap, err := client.clientset.CoreV1().ConfigMaps(NSKubeSystem).Get(ctx, name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		return new(internal.Revisions), nil
 	}
@@ -138,7 +151,7 @@ func (client Client) GetRevisions(ctx context.Context, release string) (*interna
 	}
 
 	var revisions internal.Revisions
-	if err := json.Unmarshal([]byte(configMap.Data["revisions"]), &revisions); err != nil {
+	if err := json.Unmarshal([]byte(configMap.Data[KeyRevisions]), &revisions); err != nil {
 		return nil, err
 	}
 
@@ -146,9 +159,9 @@ func (client Client) GetRevisions(ctx context.Context, release string) (*interna
 }
 
 func (client Client) UpsertRevisions(ctx context.Context, release string, revisions *internal.Revisions) error {
-	name := "halloumi-" + release
+	name := releaseName(release)
 
-	configMaps := client.clientset.CoreV1().ConfigMaps("kube-system")
+	configMaps := client.clientset.CoreV1().ConfigMaps(NSKubeSystem)
 
 	data, err := json.Marshal(revisions)
 	if err != nil {
@@ -161,9 +174,9 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 			ctx,
 			&corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: name},
-				Data:       map[string]string{"revisions": string(data)},
+				Data:       map[string]string{KeyRevisions: string(data)},
 			},
-			metav1.CreateOptions{FieldManager: "halloumi"},
+			metav1.CreateOptions{FieldManager: Halloumi},
 		)
 		return err
 	}
@@ -172,7 +185,7 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 		return fmt.Errorf("failed to get revisions: %w", err)
 	}
 
-	configMap.Data["revisions"] = string(data)
+	configMap.Data[KeyRevisions] = string(data)
 
 	_, err = configMaps.Update(ctx, configMap, metav1.UpdateOptions{FieldManager: "halloumu"})
 	return err
@@ -204,4 +217,72 @@ func (client Client) getDynamicResourceInterface(resource *unstructured.Unstruct
 	namespace := internal.Namespace(resource)
 
 	return client.dynamic.Resource(gvr).Namespace(namespace), nil
+}
+
+func (client Client) UpdateResourceReleaseMapping(ctx context.Context, release string, create, remove []string) error {
+	configMaps := client.clientset.CoreV1().ConfigMaps(NSKubeSystem)
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		configMap, err := configMaps.Get(ctx, ResourceReleaseMapping, metav1.GetOptions{})
+		if kerrors.IsNotFound(err) {
+			mapping := map[string]string{}
+			for _, value := range create {
+				mapping[value] = release
+			}
+
+			_, err := configMaps.Create(
+				ctx,
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: ResourceReleaseMapping},
+					Data:       mapping,
+				},
+				metav1.CreateOptions{FieldManager: Halloumi},
+			)
+			return err
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed to get resource to release mapping: %w", err)
+		}
+
+		for _, value := range remove {
+			delete(configMap.Data, value)
+		}
+		for _, value := range create {
+			configMap.Data[value] = release
+		}
+
+		_, err = configMaps.Update(ctx, configMap, metav1.UpdateOptions{FieldManager: Halloumi})
+		return err
+	})
+}
+
+func (client Client) GetResourceReleaseMapping(ctx context.Context) (map[string]string, error) {
+	configMaps := client.clientset.CoreV1().ConfigMaps(NSKubeSystem)
+
+	configMap, err := configMaps.Get(ctx, ResourceReleaseMapping, metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return make(map[string]string), nil
+		}
+		return nil, err
+	}
+
+	return configMap.Data, nil
+}
+
+func (client Client) ValidateOwnership(ctx context.Context, release string, resources []*unstructured.Unstructured) error {
+	resourceReleaseMapping, err := client.GetResourceReleaseMapping(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get release to resource mapping: %w", err)
+	}
+
+	var errs []error
+	for _, resource := range internal.CanonicalNameList(resources) {
+		if currentRelease, ok := resourceReleaseMapping[resource]; ok && currentRelease != release {
+			errs = append(errs, fmt.Errorf("resource %+q is owned by release %+q", resource, currentRelease))
+		}
+	}
+
+	return xerr.MultiErrOrderedFrom("conflict(s)", errs...)
 }

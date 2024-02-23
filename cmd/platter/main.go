@@ -53,7 +53,7 @@ func run() error {
 		},
 	}
 
-	_ = k8.Service{
+	svc := k8.Service{
 		APIVersion: "v1",
 		Kind:       "Service",
 		Metadata:   k8.Metadata{Name: name},
@@ -71,5 +71,5 @@ func run() error {
 
 	return json.
 		NewEncoder(os.Stdout).
-		Encode([]any{deployment})
+		Encode([]any{deployment, svc})
 }

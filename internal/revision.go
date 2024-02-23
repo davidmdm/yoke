@@ -54,10 +54,13 @@ func AddHallmouiMetadata(resources []*unstructured.Unstructured, release string)
 }
 
 func Canonical(resource *unstructured.Unstructured) string {
+	gvk := resource.GetObjectKind().GroupVersionKind()
+
 	return strings.ToLower(strings.Join(
 		[]string{
 			Namespace(resource),
-			strings.ReplaceAll(resource.GetAPIVersion(), "/", "."),
+			cmp.Or(gvk.Group, "core"),
+			gvk.Version,
 			resource.GetKind(),
 			resource.GetName(),
 		},
@@ -67,4 +70,12 @@ func Canonical(resource *unstructured.Unstructured) string {
 
 func Namespace(resource *unstructured.Unstructured) string {
 	return cmp.Or(resource.GetNamespace(), "default")
+}
+
+func CanonicalNameList(resources []*unstructured.Unstructured) []string {
+	result := make([]string, len(resources))
+	for i, resource := range resources {
+		result[i] = Canonical(resource)
+	}
+	return result
 }

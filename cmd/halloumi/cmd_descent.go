@@ -90,6 +90,10 @@ func Descent(ctx context.Context, params DescentParams) error {
 		return fmt.Errorf("revision %d is not within history", params.RevisionID)
 	}
 
+	if err := client.ValidateOwnership(ctx, params.Release, next.Resources); err != nil {
+		return fmt.Errorf("failed to validate ownership: %w", err)
+	}
+
 	previous := revisions.CurrentResources()
 
 	if err := client.ApplyResources(ctx, next.Resources); err != nil {
@@ -102,8 +106,18 @@ func Descent(ctx context.Context, params DescentParams) error {
 		return fmt.Errorf("failed to update revision history: %w", err)
 	}
 
-	if err := client.RemoveOrphans(ctx, previous, next.Resources); err != nil {
+	removed, err := client.RemoveOrphans(ctx, previous, next.Resources)
+	if err != nil {
 		return fmt.Errorf("failed to remove orphaned resources: %w", err)
+	}
+
+	var (
+		createdNames = internal.CanonicalNameList(next.Resources)
+		removedNames = internal.CanonicalNameList(removed)
+	)
+
+	if err := client.UpdateResourceReleaseMapping(ctx, params.Release, createdNames, removedNames); err != nil {
+		return fmt.Errorf("failed to update resource release mapping: %w", err)
 	}
 
 	return nil

@@ -136,6 +136,10 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return internal.Warning("resources are the same as previous revision: skipping takeoff")
 	}
 
+	if err := client.ValidateOwnership(ctx, params.Release, resources); err != nil {
+		return fmt.Errorf("failed to validate ownership: %w", err)
+	}
+
 	if err := client.ApplyResources(ctx, resources); err != nil {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
@@ -146,8 +150,18 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to create revision: %w", err)
 	}
 
-	if err := client.RemoveOrphans(ctx, previous, resources); err != nil {
+	removed, err := client.RemoveOrphans(ctx, previous, resources)
+	if err != nil {
 		return fmt.Errorf("failed to remove orhpans: %w", err)
+	}
+
+	var (
+		createdNames = internal.CanonicalNameList(resources)
+		removedNames = internal.CanonicalNameList(removed)
+	)
+
+	if err := client.UpdateResourceReleaseMapping(ctx, params.Release, createdNames, removedNames); err != nil {
+		return fmt.Errorf("failed to update resource release mapping: %w", err)
 	}
 
 	return nil
