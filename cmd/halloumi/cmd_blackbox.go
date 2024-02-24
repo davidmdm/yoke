@@ -88,15 +88,13 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return err
 	}
 
-	index := slices.IndexFunc(allReleases, func(revisions internal.Revisions) bool {
+	revisions, ok := Find(allReleases, func(revisions internal.Revisions) bool {
 		return revisions.Release == params.Release
 	})
-
-	if index < 0 {
+	if !ok {
 		return fmt.Errorf("release %q not found", params.Release)
 	}
 
-	revisions := allReleases[index]
 	if params.RevisionID == 0 {
 		tbl := table.NewWriter()
 		tbl.SetStyle(table.StyleRounded)
@@ -113,18 +111,15 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return err
 	}
 
-	index = slices.IndexFunc(revisions.History, func(revision internal.Revision) bool {
+	revision, ok := Find(revisions.History, func(revision internal.Revision) bool {
 		return revision.ID == params.RevisionID
 	})
-
-	if index < 0 {
+	if !ok {
 		return fmt.Errorf("revision %d not found", params.RevisionID)
 	}
 
-	resources := revisions.History[index].Resources
-
-	output := make(map[string]any, len(resources))
-	for _, resource := range resources {
+	output := make(map[string]any, len(revision.Resources))
+	for _, resource := range revision.Resources {
 		output[internal.Canonical(resource)] = resource.Object
 	}
 
@@ -136,6 +131,16 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return fmt.Errorf("failed to encode resources: %w", err)
 	}
 
-	_, err = fmt.Fprint(os.Stderr, buffer.String())
+	_, err = fmt.Fprint(os.Stdout, buffer.String())
 	return err
+}
+
+func Find[S ~[]E, E any](slice S, fn func(E) bool) (E, bool) {
+	switch idx := slices.IndexFunc(slice, fn); idx {
+	case -1:
+		var zero E
+		return zero, false
+	default:
+		return slice[idx], true
+	}
 }
