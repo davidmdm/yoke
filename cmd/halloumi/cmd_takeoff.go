@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha1"
 	_ "embed"
 	"errors"
 	"flag"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -80,22 +82,23 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 }
 
 func TakeOff(ctx context.Context, params TakeoffParams) error {
-	output, err := func() ([]byte, error) {
+	output, wasm, err := func() ([]byte, []byte, error) {
 		if params.Platter.Input != nil && params.Platter.Path == "" {
-			return io.ReadAll(params.Platter.Input)
+			output, err := io.ReadAll(params.Platter.Input)
+			return output, nil, err
 		}
 
 		wasm, err := LoadWasm(ctx, params.Platter.Path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read wasm program: %w", err)
+			return nil, nil, fmt.Errorf("failed to read wasm program: %w", err)
 		}
 
 		output, err := wasi.Execute(ctx, wasm, params.Release, params.Platter.Input, params.Platter.Args...)
 		if err != nil {
-			return nil, fmt.Errorf("failed to execute wasm: %w", err)
+			return nil, nil, fmt.Errorf("failed to execute wasm: %w", err)
 		}
 
-		return output, nil
+		return output, wasm, nil
 	}()
 	if err != nil {
 		return fmt.Errorf("failed to load platter: %w", err)
@@ -144,7 +147,7 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
-	revisions.Add(resources)
+	revisions.Add(resources, path.Clean(params.Platter.Path), fmt.Sprintf("%x", sha1.Sum(wasm)))
 
 	if err := client.UpsertRevisions(ctx, params.Release, revisions); err != nil {
 		return fmt.Errorf("failed to create revision: %w", err)

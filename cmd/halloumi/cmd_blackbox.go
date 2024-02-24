@@ -102,9 +102,9 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		history := revisions.History
 		slices.Reverse(history)
 
-		tbl.AppendHeader(table.Row{"id", "resources", "created at"})
+		tbl.AppendHeader(table.Row{"id", "resources", "platter", "sha", "created at"})
 		for _, version := range history {
-			tbl.AppendRow(table.Row{version.ID, len(version.Resources), version.CreatedAt})
+			tbl.AppendRow(table.Row{version.ID, len(version.Resources), version.Platter, version.PlatterSHA, version.CreatedAt})
 		}
 
 		_, err = io.WriteString(os.Stdout, tbl.Render()+"\n")

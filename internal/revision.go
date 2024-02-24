@@ -15,11 +15,13 @@ type Revisions struct {
 	ActiveIndex int        `json:"activeIndex"`
 }
 
-func (revisions *Revisions) Add(resources []*unstructured.Unstructured) {
+func (revisions *Revisions) Add(resources []*unstructured.Unstructured, name, sha string) {
 	revisions.History = append(revisions.History, Revision{
-		ID:        revisions.Total + 1,
-		Resources: resources,
-		CreatedAt: time.Now(),
+		ID:         revisions.Total + 1,
+		Platter:    name,
+		PlatterSHA: sha,
+		CreatedAt:  time.Now(),
+		Resources:  resources,
 	})
 	revisions.ActiveIndex = len(revisions.History) - 1
 	revisions.Total++
@@ -33,9 +35,11 @@ func (revisions Revisions) CurrentResources() []*unstructured.Unstructured {
 }
 
 type Revision struct {
-	ID        int                          `json:"id"`
-	CreatedAt time.Time                    `json:"createdAt"`
-	Resources []*unstructured.Unstructured `json:"resources"`
+	ID         int                          `json:"id"`
+	Platter    string                       `json:"platter"`
+	PlatterSHA string                       `json:"platterSHA"`
+	CreatedAt  time.Time                    `json:"createdAt"`
+	Resources  []*unstructured.Unstructured `json:"resources"`
 }
 
 func AddHallmouiMetadata(resources []*unstructured.Unstructured, release string) {

@@ -7,8 +7,8 @@ github.com/davidmdm/x/xcontext v0.0.2 h1:8US+zdRCPmnWeSa/28U+dvbhdkBd8mI6XhP7meI
 github.com/davidmdm/x/xcontext v0.0.2/go.mod h1:lfAacRD741WjdRwwuTrCaKtvEgPsGMSlmfwgib2SpVA=
 github.com/davidmdm/x/xerr v0.0.3 h1:WwHvo6qzR+eRmHq69Ftgb7PL9832iwy313XpQyJRGtM=
 github.com/davidmdm/x/xerr v0.0.3/go.mod h1:nEfdhUc3O/FmGUGLiJp2hHRhBeANkon7PJexIQ1DlAE=
-github.com/emicklei/go-restful/v3 v3.11.2 h1:1onLa9DcsMYO9P+CXaL0dStDqQ2EHHXLiz+BtnqkLAU=
-github.com/emicklei/go-restful/v3 v3.11.2/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
+github.com/emicklei/go-restful/v3 v3.11.3 h1:yagOQz/38xJmcNeZJtrUcKjkHRltIaIFXKWeG1SkWGE=
+github.com/emicklei/go-restful/v3 v3.11.3/go.mod h1:6n3XBCmQQb25CM2LCACGz8ukIrRry+4bhvbpWn3mrbc=
 github.com/go-logr/logr v1.4.1 h1:pKouT5E8xu9zeFC39JXRDukb6JFQPXM5p5I91188VAQ=
 github.com/go-logr/logr v1.4.1/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-openapi/jsonpointer v0.20.2 h1:mQc3nmndL8ZBzStEo3JYF8wzmeWffDH4VbXz58sAx6Q=
