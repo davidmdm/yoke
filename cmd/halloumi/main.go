@@ -11,9 +11,10 @@ import (
 	"strings"
 	"syscall"
 
+	"golang.org/x/term"
+
 	"github.com/davidmdm/halloumi/internal"
 	"github.com/davidmdm/x/xcontext"
-	"golang.org/x/term"
 )
 
 func main() {

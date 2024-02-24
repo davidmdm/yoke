@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/davidmdm/halloumi/internal"
 	"github.com/davidmdm/halloumi/internal/k8"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 //go:embed cmd_descent_help.txt

@@ -8,9 +8,10 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/davidmdm/halloumi/internal/k8"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/davidmdm/halloumi/internal/k8"
 )
 
 type BlackboxParams struct {
