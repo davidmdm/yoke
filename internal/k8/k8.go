@@ -25,9 +25,10 @@ import (
 
 const (
 	ResourceReleaseMapping = "halloumi-resource-release-mapping"
-	KeyRevisions           = "revisions"
 	NSKubeSystem           = "kube-system"
 	Halloumi               = "halloumi"
+	KeyRevisions           = "revisions"
+	KeyRelease             = "release"
 )
 
 func releaseName(release string) string { return Halloumi + "-" + release }
@@ -144,7 +145,7 @@ func (client Client) GetRevisions(ctx context.Context, release string) (*interna
 
 	configMap, err := client.clientset.CoreV1().ConfigMaps(NSKubeSystem).Get(ctx, name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
-		return new(internal.Revisions), nil
+		return &internal.Revisions{Release: release}, nil
 	}
 	if err != nil {
 		return nil, err
@@ -173,8 +174,14 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 		_, err := configMaps.Create(
 			ctx,
 			&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: name},
-				Data:       map[string]string{KeyRevisions: string(data)},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   name,
+					Labels: map[string]string{"internal.halloumi/kind": "revisions"},
+				},
+				Data: map[string]string{
+					KeyRelease:   release,
+					KeyRevisions: string(data),
+				},
 			},
 			metav1.CreateOptions{FieldManager: Halloumi},
 		)
@@ -233,8 +240,11 @@ func (client Client) UpdateResourceReleaseMapping(ctx context.Context, release s
 			_, err := configMaps.Create(
 				ctx,
 				&corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{Name: ResourceReleaseMapping},
-					Data:       mapping,
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   ResourceReleaseMapping,
+						Labels: map[string]string{"internal.halloumi/kind": "resource-mapping"},
+					},
+					Data: mapping,
 				},
 				metav1.CreateOptions{FieldManager: Halloumi},
 			)
@@ -285,4 +295,24 @@ func (client Client) ValidateOwnership(ctx context.Context, release string, reso
 	}
 
 	return xerr.MultiErrOrderedFrom("conflict(s)", errs...)
+}
+
+func (client Client) GetAllRevisions(ctx context.Context) ([]internal.Revisions, error) {
+	configMaps := client.clientset.CoreV1().ConfigMaps(NSKubeSystem)
+
+	configs, err := configMaps.List(ctx, metav1.ListOptions{LabelSelector: "internal.halloumi/kind=revisions"})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list revisions: %w", err)
+	}
+
+	results := make([]internal.Revisions, len(configs.Items))
+	for i, cfg := range configs.Items {
+		var revisions internal.Revisions
+		if err := json.Unmarshal([]byte(cfg.Data[KeyRevisions]), &revisions); err != nil {
+			return nil, fmt.Errorf("could not parse release %q state: %w", cfg.Data[KeyRelease], err)
+		}
+		results[i] = revisions
+	}
+
+	return results, nil
 }

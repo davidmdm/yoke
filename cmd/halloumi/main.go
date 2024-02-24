@@ -78,6 +78,14 @@ func run() error {
 		{
 			return fmt.Errorf("not implemented")
 		}
+	case "blackbox", "inspect":
+		{
+			params, err := GetBlackBoxParams(settings, flag.Args()[1:])
+			if err != nil {
+				return err
+			}
+			return Blackbox(ctx, *params)
+		}
 	case "version":
 		{
 			fmt.Println(version())

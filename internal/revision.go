@@ -8,6 +8,7 @@ import (
 )
 
 type Revisions struct {
+	Release     string     `json:"release"`
 	Total       int        `json:"total"`
 	History     []Revision `json:"history"`
 	ActiveIndex int        `json:"activeIndex"`
