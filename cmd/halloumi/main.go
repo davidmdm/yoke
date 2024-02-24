@@ -54,6 +54,8 @@ func run() error {
 		return fmt.Errorf("no command provided")
 	}
 
+	subcmdArgs := flag.Args()[1:]
+
 	switch cmd := flag.Arg(0); cmd {
 	case "takeoff", "up", "apply":
 		{
@@ -61,7 +63,7 @@ func run() error {
 			if !term.IsTerminal(int(os.Stdin.Fd())) {
 				source = os.Stdin
 			}
-			params, err := GetTakeoffParams(settings, source, flag.Args()[1:])
+			params, err := GetTakeoffParams(settings, source, subcmdArgs)
 			if err != nil {
 				return err
 			}
@@ -69,7 +71,7 @@ func run() error {
 		}
 	case "descent", "down", "restore":
 		{
-			params, err := GetDescentfParams(settings, flag.Args()[1:])
+			params, err := GetDescentfParams(settings, subcmdArgs)
 			if err != nil {
 				return err
 			}
@@ -77,11 +79,15 @@ func run() error {
 		}
 	case "mayday", "delete":
 		{
-			return fmt.Errorf("not implemented")
+			params, err := GetMaydayParams(settings, subcmdArgs)
+			if err != nil {
+				return err
+			}
+			return Mayday(ctx, *params)
 		}
 	case "blackbox", "inspect":
 		{
-			params, err := GetBlackBoxParams(settings, flag.Args()[1:])
+			params, err := GetBlackBoxParams(settings, subcmdArgs)
 			if err != nil {
 				return err
 			}

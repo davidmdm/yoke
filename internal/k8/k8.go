@@ -255,6 +255,10 @@ func (client Client) UpdateResourceReleaseMapping(ctx context.Context, release s
 			return fmt.Errorf("failed to get resource to release mapping: %w", err)
 		}
 
+		if configMap.Data == nil {
+			configMap.Data = make(map[string]string, len(create))
+		}
+
 		for _, value := range remove {
 			delete(configMap.Data, value)
 		}
@@ -315,4 +319,10 @@ func (client Client) GetAllRevisions(ctx context.Context) ([]internal.Revisions,
 	}
 
 	return results, nil
+}
+
+func (client Client) DeleteRevisions(ctx context.Context, release string) error {
+	return client.clientset.CoreV1().
+		ConfigMaps(NSKubeSystem).
+		Delete(ctx, releaseName(release), metav1.DeleteOptions{})
 }

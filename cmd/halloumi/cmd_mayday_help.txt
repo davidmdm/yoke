@@ -1,0 +1,13 @@
+!yellow halloumi mayday
+
+!cyan Usage: 
+  halloumi mayday [flags] <release>
+
+!cyan Aliases:
+  delete
+
+!cyan Examples:
+  # delete a release and all its revision history
+  halloumi blackbox foo
+
+!cyan Flags:
