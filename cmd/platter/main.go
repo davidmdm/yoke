@@ -7,7 +7,9 @@ import (
 	"os"
 	"strconv"
 
-	k8 "github.com/davidmdm/halloumi/pkg/utils/resource"
+	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
+	corev1 "k8s.io/client-go/applyconfigurations/core/v1"
+	metav1 "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
 func main() {
@@ -28,48 +30,22 @@ func run() error {
 		replicas = 2
 	}
 
-	deployment := k8.Deployment{
-		APIVersion: "apps/v1",
-		Kind:       "Deployment",
-		Metadata: k8.Metadata{
-			Name:      name,
-			Namespace: "default",
-		},
-		Spec: k8.DeploymentSpec{
-			Replicas: int32(replicas),
-			Selector: k8.Selector{MatchLabels: labels},
-			Template: k8.PodTemplateSpec{
-				Metadata: k8.TemplateMetadata{Labels: labels},
-				Spec: k8.PodSpec{
-					Containers: []k8.Container{
-						{
-							Name:    "web-app",
-							Image:   "alpine:latest",
-							Command: []string{"watch", "echo", "hello", "riccy"},
-						},
-					},
-				},
-			},
-		},
-	}
+	dep := appsv1.Deployment(name, "").
+		WithLabels(labels).
+		WithSpec(
+			appsv1.DeploymentSpec().
+				WithReplicas(int32(replicas)).
+				WithSelector(metav1.LabelSelector().WithMatchLabels(labels)).
+				WithTemplate(
+					corev1.PodTemplateSpec().
+						WithLabels(labels).WithSpec(corev1.PodSpec().WithContainers(
+						corev1.Container().
+							WithName(name).
+							WithImage("alpine:latest").
+							WithCommand("watch", "echo", "hello", "world"),
+					)),
+				),
+		)
 
-	svc := k8.Service{
-		APIVersion: "v1",
-		Kind:       "Service",
-		Metadata:   k8.Metadata{Name: name},
-		Spec: k8.ServiceSpec{
-			Selector: labels,
-			Ports: []k8.ServicePort{
-				{
-					Protocol:   "TCP",
-					Port:       80,
-					TargetPort: 3000,
-				},
-			},
-		},
-	}
-
-	return json.
-		NewEncoder(os.Stdout).
-		Encode([]any{deployment, svc})
+	return json.NewEncoder(os.Stdout).Encode([]any{dep})
 }
