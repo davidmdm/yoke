@@ -121,17 +121,19 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return fmt.Errorf("revision %d not found", params.RevisionID)
 	}
 
-	revision := revisions.History[index]
+	resources := revisions.History[index].Resources
+
+	output := make(map[string]any, len(resources))
+	for _, resource := range resources {
+		output[internal.Canonical(resource)] = resource.Object
+	}
 
 	var buffer bytes.Buffer
 	encoder := yaml.NewEncoder(&buffer)
 	encoder.SetIndent(2)
 
-	for _, resource := range revision.Resources {
-		fmt.Fprintf(&buffer, "---\n# Source: %s\n", internal.Canonical(resource))
-		if err := encoder.Encode(resource.Object); err != nil {
-			return fmt.Errorf("failed to encode resource: %s: %w", internal.Canonical(resource), err)
-		}
+	if err := encoder.Encode(output); err != nil {
+		return fmt.Errorf("failed to encode resources: %w", err)
 	}
 
 	_, err = fmt.Fprint(os.Stderr, buffer.String())
