@@ -10,6 +10,7 @@ Deploys "halloumi platters" to a kubernetes cluster.
 takeoff   (aliases: up, apply)
 descent   (aliases: down, restore)
 mayday    (aliases: delete)
+blackbox  (aliases: inspect)
 version
 
 !cyan Global Flags:

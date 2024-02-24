@@ -1,0 +1,19 @@
+!yellow halloumi blackox
+
+!cyan Usage: 
+  halloumi blackbox [flags] [release] [revision-id]
+
+!cyan Aliases:
+  inspect
+
+!cyan Examples:
+  # get an overview of all releases and their current revision id
+  halloumi blackbox
+
+  # get an overview of all revisions for a given release
+  halloumi blackbox release
+
+  # render the resources for specific revision
+  halloumi blackbox release 42
+
+!cyan Flags:

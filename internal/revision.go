@@ -3,6 +3,7 @@ package internal
 import (
 	"cmp"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -18,6 +19,7 @@ func (revisions *Revisions) Add(resources []*unstructured.Unstructured) {
 	revisions.History = append(revisions.History, Revision{
 		ID:        revisions.Total + 1,
 		Resources: resources,
+		CreatedAt: time.Now(),
 	})
 	revisions.ActiveIndex = len(revisions.History) - 1
 	revisions.Total++
@@ -32,6 +34,7 @@ func (revisions Revisions) CurrentResources() []*unstructured.Unstructured {
 
 type Revision struct {
 	ID        int                          `json:"id"`
+	CreatedAt time.Time                    `json:"createdAt"`
 	Resources []*unstructured.Unstructured `json:"resources"`
 }
 
