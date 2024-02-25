@@ -177,8 +177,8 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 	b := buffer.String()
 
 	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A:        indentLines(difflib.SplitLines(a), "\t"),
-		B:        indentLines(difflib.SplitLines(b), "\t"),
+		A:        indentLines(difflib.SplitLines(a), "  "),
+		B:        indentLines(difflib.SplitLines(b), "  "),
 		FromFile: fmt.Sprintf("revision %d", params.RevisionID),
 		ToFile:   fmt.Sprintf("revision %d", params.DiffRevisionID),
 		Context:  params.Context,
