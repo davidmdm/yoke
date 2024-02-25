@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -95,15 +94,9 @@ func run() error {
 		}
 	case "version":
 		{
-			fmt.Println(version())
-			return nil
+			return Version()
 		}
 	default:
 		return fmt.Errorf("unknown command: %s", cmd)
 	}
-}
-
-func version() string {
-	info, _ := debug.ReadBuildInfo()
-	return info.Main.Version
 }
