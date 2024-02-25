@@ -19,13 +19,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/davidmdm/halloumi/internal"
+	"github.com/davidmdm/x/xerr"
 )
 
-func loadTgz(data []byte) (*chart.Chart, error) {
+func LoadChartFromZippedArchive(data []byte) (chart *Chart, err error) {
 	gz, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		return nil, fmt.Errorf("gzip: %w", err)
+		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
+	defer func() {
+		err = xerr.MultiErrFrom("", err, gz.Close())
+	}()
 
 	archive := tar.NewReader(gz)
 
@@ -36,7 +40,7 @@ func loadTgz(data []byte) (*chart.Chart, error) {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to iterate through archive: %w", err)
 		}
 
 		if header.Typeflag != tar.TypeReg {
@@ -56,40 +60,37 @@ func loadTgz(data []byte) (*chart.Chart, error) {
 		})
 	}
 
-	return loader.LoadFiles(files)
-}
-
-type Params struct {
-	Source      []byte
-	ReleaseName string
-	Namespace   string
-	Values      any
-}
-
-func Render(params Params) ([]*unstructured.Unstructured, error) {
-	chart, err := loadTgz(params.Source)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load chart: %w", err)
-	}
-
-	opts := chartutil.ReleaseOptions{
-		Name:      params.ReleaseName,
-		Namespace: params.Namespace,
-	}
-
-	capabilities := chartutil.DefaultCapabilities.Copy()
-
-	values, err := asMap(params.Values)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert values to map: %w", err)
-	}
-
-	values, err = chartutil.ToRenderValues(chart, values, opts, capabilities)
+	underlyingChart, err := loader.LoadFiles(files)
 	if err != nil {
 		return nil, err
 	}
 
-	rendered, err := engine.Engine{}.Render(chart, values)
+	return &Chart{underlyingChart}, nil
+}
+
+type Chart struct {
+	*chart.Chart
+}
+
+func (chart Chart) Render(release, namespace string, values any) ([]*unstructured.Unstructured, error) {
+	opts := chartutil.ReleaseOptions{
+		Name:      release,
+		Namespace: namespace,
+	}
+
+	capabilities := chartutil.DefaultCapabilities.Copy()
+
+	valueMap, err := asMap(values)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert values to map: %w", err)
+	}
+
+	valueMap, err = chartutil.ToRenderValues(chart.Chart, valueMap, opts, capabilities)
+	if err != nil {
+		return nil, err
+	}
+
+	rendered, err := engine.Engine{}.Render(chart.Chart, valueMap)
 	if err != nil {
 		return nil, err
 	}
