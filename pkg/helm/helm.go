@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -66,6 +67,52 @@ func LoadChartFromZippedArchive(data []byte) (chart *Chart, err error) {
 	}
 
 	return &Chart{underlyingChart}, nil
+}
+
+func LoadChartFromFS(fs embed.FS) (*Chart, error) {
+	files, err := getAllFilesFromDir(fs, ".")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get files from FS: %w", err)
+	}
+
+	underlyingChart, err := loader.LoadFiles(files)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Chart{underlyingChart}, nil
+}
+
+func getAllFilesFromDir(fs embed.FS, p string) ([]*loader.BufferedFile, error) {
+	entries, err := fs.ReadDir(p)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read dir at %s: %w", p, err)
+	}
+
+	var results []*loader.BufferedFile
+	for _, entry := range entries {
+		filepath := path.Join(p, entry.Name())
+		if entry.IsDir() {
+			subEntries, err := getAllFilesFromDir(fs, filepath)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, subEntries...)
+			continue
+		}
+
+		content, err := fs.ReadFile(filepath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file at %s: %w", filepath, err)
+		}
+
+		results = append(results, &loader.BufferedFile{
+			Name: path.Join(p, entry.Name()),
+			Data: content,
+		})
+	}
+
+	return results, nil
 }
 
 type Chart struct {
