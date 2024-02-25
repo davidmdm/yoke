@@ -68,19 +68,12 @@ type Revision struct {
 
 func AddHallmouiMetadata(resources []*unstructured.Unstructured, release string) {
 	for _, resource := range resources {
-		annotations := resource.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		annotations["halloumi/managed-by"] = "halloumi"
-		resource.SetAnnotations(annotations)
-
 		labels := resource.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string)
 		}
-		labels["halloumi/release"] = release
-
+		labels["app.kubernetes.io/managed-by"] = "halloumi"
+		labels["app.kubernetes.io/halloumi-release"] = release
 		resource.SetLabels(labels)
 	}
 }
