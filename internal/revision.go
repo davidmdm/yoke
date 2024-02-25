@@ -2,6 +2,10 @@ package internal
 
 import (
 	"cmp"
+	"crypto/sha1"
+	"fmt"
+	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -11,17 +15,38 @@ import (
 type Revisions struct {
 	Release     string     `json:"release"`
 	Total       int        `json:"total"`
-	History     []Revision `json:"history"`
 	ActiveIndex int        `json:"activeIndex"`
+	History     []Revision `json:"history"`
 }
 
-func (revisions *Revisions) Add(resources []*unstructured.Unstructured, name, sha string) {
+type Source struct {
+	Ref      string `json:"ref"`
+	Checksum string `json:"checksum"`
+}
+
+func SourceFrom(ref string, wasm []byte) (src Source) {
+	if len(wasm) > 0 {
+		src.Checksum = fmt.Sprintf("%x", sha1.Sum(wasm))
+	}
+
+	if ref != "" {
+		u, _ := url.Parse(ref)
+		if u.Scheme != "" {
+			src.Ref = u.String()
+		} else {
+			src.Ref = path.Clean(ref)
+		}
+	}
+
+	return
+}
+
+func (revisions *Revisions) Add(resources []*unstructured.Unstructured, ref string, wasm []byte) {
 	revisions.History = append(revisions.History, Revision{
-		ID:         revisions.Total + 1,
-		Platter:    name,
-		PlatterSHA: sha,
-		CreatedAt:  time.Now(),
-		Resources:  resources,
+		ID:        revisions.Total + 1,
+		Source:    SourceFrom(ref, wasm),
+		CreatedAt: time.Now(),
+		Resources: resources,
 	})
 	revisions.ActiveIndex = len(revisions.History) - 1
 	revisions.Total++
@@ -35,11 +60,10 @@ func (revisions Revisions) CurrentResources() []*unstructured.Unstructured {
 }
 
 type Revision struct {
-	ID         int                          `json:"id"`
-	Platter    string                       `json:"platter"`
-	PlatterSHA string                       `json:"platterSHA"`
-	CreatedAt  time.Time                    `json:"createdAt"`
-	Resources  []*unstructured.Unstructured `json:"resources"`
+	ID        int                          `json:"id"`
+	Source    Source                       `json:"source"`
+	CreatedAt time.Time                    `json:"createdAt"`
+	Resources []*unstructured.Unstructured `json:"resources"`
 }
 
 func AddHallmouiMetadata(resources []*unstructured.Unstructured, release string) {

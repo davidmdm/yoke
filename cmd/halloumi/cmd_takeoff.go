@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha1"
 	_ "embed"
 	"errors"
 	"flag"
@@ -11,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -147,7 +145,7 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
-	revisions.Add(resources, path.Clean(params.Platter.Path), fmt.Sprintf("%x", sha1.Sum(wasm)))
+	revisions.Add(resources, params.Platter.Path, wasm)
 
 	if err := client.UpsertRevisions(ctx, params.Release, revisions); err != nil {
 		return fmt.Errorf("failed to create revision: %w", err)
