@@ -7,6 +7,7 @@ require (
 	github.com/davidmdm/x/xcontext v0.0.2
 	github.com/davidmdm/x/xerr v0.0.3
 	github.com/jedib0t/go-pretty/v6 v6.5.4
+	github.com/pmezard/go-difflib v1.0.0
 	github.com/tetratelabs/wazero v1.6.0
 	golang.org/x/term v0.17.0
 	gopkg.in/yaml.v3 v3.0.1

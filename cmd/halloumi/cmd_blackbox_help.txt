@@ -1,7 +1,7 @@
 !yellow halloumi blackox
 
 !cyan Usage: 
-  halloumi blackbox [flags] [release] [revision-id]
+  halloumi blackbox [flags] [release] [revision-id] [revision-id-to-compare]
 
 !cyan Aliases:
   inspect

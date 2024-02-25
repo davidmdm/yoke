@@ -13,17 +13,21 @@ import (
 	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/pmezard/go-difflib/difflib"
 	"gopkg.in/yaml.v3"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/davidmdm/ansi"
 	"github.com/davidmdm/halloumi/internal"
 	"github.com/davidmdm/halloumi/internal/k8"
 )
 
 type BlackboxParams struct {
 	GlobalSettings
-	Release    string
-	RevisionID int
+	Release        string
+	RevisionID     int
+	DiffRevisionID int
+	Context        int
 }
 
 //go:embed cmd_blackbox_help.txt
@@ -44,6 +48,7 @@ func GetBlackBoxParams(settings GlobalSettings, args []string) (*BlackboxParams,
 	params := BlackboxParams{GlobalSettings: settings}
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
+	flagset.IntVar(&params.Context, "context", 4, "number of lines of context in diff (ignored if not comparing revisions)")
 
 	flagset.Parse(args)
 
@@ -55,6 +60,14 @@ func GetBlackBoxParams(settings GlobalSettings, args []string) (*BlackboxParams,
 			return nil, fmt.Errorf("revision must be an integer ID: %w", err)
 		}
 		params.RevisionID = revisionID
+	}
+
+	if revision := flagset.Arg(2); revision != "" {
+		revisionID, err := strconv.Atoi(flagset.Arg(2))
+		if err != nil {
+			return nil, fmt.Errorf("revision to diff must be an integer ID: %w", err)
+		}
+		params.DiffRevisionID = revisionID
 	}
 
 	return &params, nil
@@ -118,20 +131,62 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return fmt.Errorf("revision %d not found", params.RevisionID)
 	}
 
-	output := make(map[string]any, len(revision.Resources))
+	primaryRevision := make(map[string]any, len(revision.Resources))
 	for _, resource := range revision.Resources {
-		output[internal.Canonical(resource)] = resource.Object
+		primaryRevision[internal.Canonical(resource)] = resource.Object
+	}
+
+	if params.DiffRevisionID == 0 {
+		encoder := yaml.NewEncoder(os.Stdout)
+		encoder.SetIndent(2)
+
+		if err := encoder.Encode(primaryRevision); err != nil {
+			return fmt.Errorf("failed to encode resources: %w", err)
+		}
+		return nil
+	}
+
+	revision, ok = Find(revisions.History, func(revision internal.Revision) bool {
+		return revision.ID == params.DiffRevisionID
+	})
+	if !ok {
+		return fmt.Errorf("revision %d not found", params.DiffRevisionID)
+	}
+
+	diffRevision := make(map[string]any, len(revision.Resources))
+	for _, resource := range revision.Resources {
+		diffRevision[internal.Canonical(resource)] = resource.Object
 	}
 
 	var buffer bytes.Buffer
 	encoder := yaml.NewEncoder(&buffer)
 	encoder.SetIndent(2)
 
-	if err := encoder.Encode(output); err != nil {
-		return fmt.Errorf("failed to encode resources: %w", err)
+	if err := encoder.Encode(primaryRevision); err != nil {
+		return err
 	}
 
-	_, err = fmt.Fprint(os.Stdout, buffer.String())
+	a := buffer.String()
+
+	buffer.Reset()
+
+	if err := encoder.Encode(diffRevision); err != nil {
+		return err
+	}
+
+	b := buffer.String()
+
+	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
+		A:        indentLines(difflib.SplitLines(a), "\t"),
+		B:        indentLines(difflib.SplitLines(b), "\t"),
+		FromFile: fmt.Sprintf("revision %d", params.RevisionID),
+		ToFile:   fmt.Sprintf("revision %d", params.DiffRevisionID),
+		Context:  params.Context,
+	})
+
+	diff = colorizeDiff(diff)
+
+	_, err = fmt.Fprint(os.Stdout, diff)
 	return err
 }
 
@@ -143,4 +198,37 @@ func Find[S ~[]E, E any](slice S, fn func(E) bool) (E, bool) {
 	default:
 		return slice[idx], true
 	}
+}
+
+var (
+	green = ansi.MakeStyle(ansi.FgGreen)
+	red   = ansi.MakeStyle(ansi.FgRed)
+)
+
+func colorizeDiff(value string) string {
+	lines := strings.Split(value, "\n")
+	colorized := make([]string, len(lines))
+	for i, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		switch line[0] {
+		case '-':
+			colorized[i] = green.Sprint(line)
+		case '+':
+			colorized[i] = red.Sprint(line)
+		default:
+			colorized[i] = line
+		}
+	}
+
+	return strings.Join(colorized, "\n")
+}
+
+func indentLines(lines []string, indent string) []string {
+	result := make([]string, len(lines))
+	for i, line := range lines {
+		result[i] = indent + line
+	}
+	return result
 }
