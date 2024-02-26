@@ -75,10 +75,6 @@ func LoadChartFromFS(fs embed.FS) (*Chart, error) {
 		return nil, fmt.Errorf("failed to get files from FS: %w", err)
 	}
 
-	for _, f := range files {
-		fmt.Println(f.Name)
-	}
-
 	stripToChart(files)
 
 	underlyingChart, err := loader.LoadFiles(files)

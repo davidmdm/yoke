@@ -19,7 +19,7 @@ func main() {
 	}
 }
 
-//go:embed postgresql
+//go:embed all:postgresql
 var pg embed.FS
 
 func run() error {
