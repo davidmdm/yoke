@@ -16,4 +16,7 @@
   # render the resources for specific revision
   halloumi blackbox release 42
 
+  # show list of resources by release
+  halloumi blackbox --mapping
+
 !cyan Flags:
