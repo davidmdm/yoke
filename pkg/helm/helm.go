@@ -53,13 +53,13 @@ func LoadChartFromZippedArchive(data []byte) (chart *Chart, err error) {
 			return nil, err
 		}
 
-		name := strings.Join(strings.Split(path.Clean(header.Name), "/")[1:], "/")
-
 		files = append(files, &loader.BufferedFile{
-			Name: name,
+			Name: header.Name,
 			Data: content,
 		})
 	}
+
+	stripToChart(files)
 
 	underlyingChart, err := loader.LoadFiles(files)
 	if err != nil {
@@ -75,44 +75,18 @@ func LoadChartFromFS(fs embed.FS) (*Chart, error) {
 		return nil, fmt.Errorf("failed to get files from FS: %w", err)
 	}
 
+	for _, f := range files {
+		fmt.Println(f.Name)
+	}
+
+	stripToChart(files)
+
 	underlyingChart, err := loader.LoadFiles(files)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Chart{underlyingChart}, nil
-}
-
-func getAllFilesFromDir(fs embed.FS, p string) ([]*loader.BufferedFile, error) {
-	entries, err := fs.ReadDir(p)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read dir at %s: %w", p, err)
-	}
-
-	var results []*loader.BufferedFile
-	for _, entry := range entries {
-		filepath := path.Join(p, entry.Name())
-		if entry.IsDir() {
-			subEntries, err := getAllFilesFromDir(fs, filepath)
-			if err != nil {
-				return nil, err
-			}
-			results = append(results, subEntries...)
-			continue
-		}
-
-		content, err := fs.ReadFile(filepath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read file at %s: %w", filepath, err)
-		}
-
-		results = append(results, &loader.BufferedFile{
-			Name: path.Join(p, entry.Name()),
-			Data: content,
-		})
-	}
-
-	return results, nil
 }
 
 type Chart struct {
@@ -186,4 +160,60 @@ func asMap(values any) (map[string]any, error) {
 	var m map[string]any
 	err = json.Unmarshal(data, &m)
 	return m, err
+}
+
+// stripToChart modifies the names of the files such that it removes the segments
+// prior to the nearest Chart.yaml. This is done so that helm can recognize these files
+// as a chart. Usually when they are loaded in from the filesystem or archive their exists
+// a number (usually 1) folders to contain the chart. We need to strip those away.
+func stripToChart(files []*loader.BufferedFile) {
+	idx := -1
+	for _, file := range files {
+		file.Name = path.Clean(file.Name)
+		if path.Base(file.Name) != "Chart.yaml" {
+			continue
+		}
+		if length := len(strings.Split(file.Name, "/")); idx == -1 || length < idx {
+			idx = length
+		}
+	}
+	if idx == -1 {
+		return
+	}
+
+	for _, file := range files {
+		file.Name = strings.Join(strings.Split(file.Name, "/")[idx-1:], "/")
+	}
+}
+
+func getAllFilesFromDir(fs embed.FS, p string) ([]*loader.BufferedFile, error) {
+	entries, err := fs.ReadDir(p)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read dir at %s: %w", p, err)
+	}
+
+	var results []*loader.BufferedFile
+	for _, entry := range entries {
+		filepath := path.Join(p, entry.Name())
+		if entry.IsDir() {
+			subEntries, err := getAllFilesFromDir(fs, filepath)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, subEntries...)
+			continue
+		}
+
+		content, err := fs.ReadFile(filepath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file at %s: %w", filepath, err)
+		}
+
+		results = append(results, &loader.BufferedFile{
+			Name: path.Join(p, entry.Name()),
+			Data: content,
+		})
+	}
+
+	return results, nil
 }
