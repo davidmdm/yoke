@@ -14,6 +14,7 @@ import (
 
 	"github.com/davidmdm/x/xcontext"
 	"github.com/davidmdm/yoke/internal"
+	"github.com/davidmdm/yoke/internal/home"
 )
 
 func main() {
@@ -99,4 +100,12 @@ func run() error {
 	default:
 		return fmt.Errorf("unknown command: %s", cmd)
 	}
+}
+
+type GlobalSettings struct {
+	KubeConfigPath string
+}
+
+func RegisterGlobalFlags(flagset *flag.FlagSet, settings *GlobalSettings) {
+	flagset.StringVar(&settings.KubeConfigPath, "kubeconfig", home.Kubeconfig, "path to kube config")
 }

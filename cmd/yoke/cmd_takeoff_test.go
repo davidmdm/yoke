@@ -9,10 +9,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/davidmdm/yoke/internal/home"
 )
 
 func TestTakeoff(t *testing.T) {
-	settings := GlobalSettings{KubeConfigPath: kubeconfig}
+	settings := GlobalSettings{KubeConfigPath: home.Kubeconfig}
 	params := TakeoffParams{
 		GlobalSettings: settings,
 		Release:        "foo",

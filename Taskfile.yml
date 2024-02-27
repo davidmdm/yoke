@@ -13,7 +13,8 @@ tasks:
 
   test:
     cmds:
-      - go test -cover -p 1 -v ./...
+      - kind delete cluster && kind create cluster
+      - go test -coverprofile cover.out -p 1 -v ./...
 
   kube:
     cmds:
