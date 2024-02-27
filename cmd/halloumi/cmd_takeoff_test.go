@@ -47,7 +47,7 @@ spec:
           name: sample-app
 `),
 		},
-		OutputDir: "",
+		Out: "",
 	}
 
 	restcfg, err := clientcmd.BuildConfigFromFlags("", params.KubeConfigPath)

@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strings"
 
+	y3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/tools/clientcmd"
@@ -34,9 +35,9 @@ type TakeoffPlatterParams struct {
 
 type TakeoffParams struct {
 	GlobalSettings
-	Release   string
-	Platter   TakeoffPlatterParams
-	OutputDir string
+	Release string
+	Platter TakeoffPlatterParams
+	Out     string
 }
 
 //go:embed cmd_takeoff_help.txt
@@ -60,7 +61,7 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 	}
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
-	flagset.StringVar(&params.OutputDir, "outDir", "", "if present outputs platter resources to outDir instead of applying to k8")
+	flagset.StringVar(&params.Out, "out", "", "if present outputs platter resources to directory specified, if out is - outputs to standard out")
 
 	args, params.Platter.Args = internal.CutArgs(args)
 
@@ -109,11 +110,11 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 
 	internal.AddHallmouiMetadata(resources, params.Release)
 
-	if params.OutputDir != "" {
-		if err := ExportToFS(params.OutputDir, params.Release, resources); err != nil {
-			return fmt.Errorf("failed to export release: %w", err)
+	if params.Out != "" {
+		if params.Out == "-" {
+			return ExportToStdout(resources)
 		}
-		return nil
+		return ExportToFS(params.Out, params.Release, resources)
 	}
 
 	restcfg, err := clientcmd.BuildConfigFromFlags("", params.KubeConfigPath)
@@ -213,5 +214,16 @@ func ExportToFS(dir, release string, resources []*unstructured.Unstructured) err
 		}
 	}
 
-	return xerr.MultiErrFrom("", errs...)
+	return xerr.MultiErrFrom("failed to write resource(s)", errs...)
+}
+
+func ExportToStdout(resources []*unstructured.Unstructured) error {
+	output := make(map[string]any, len(resources))
+	for _, resource := range resources {
+		output[internal.Canonical(resource)] = resource.Object
+	}
+
+	encoder := y3.NewEncoder(os.Stdout)
+	encoder.SetIndent(2)
+	return encoder.Encode(output)
 }
