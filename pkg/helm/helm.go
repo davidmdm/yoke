@@ -19,8 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/x/xerr"
+	"github.com/davidmdm/yoke/internal"
 )
 
 func LoadChartFromZippedArchive(data []byte) (chart *Chart, err error) {

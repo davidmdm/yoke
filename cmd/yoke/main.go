@@ -12,8 +12,8 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/x/xcontext"
+	"github.com/davidmdm/yoke/internal"
 )
 
 func main() {

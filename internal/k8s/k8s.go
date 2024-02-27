@@ -27,7 +27,7 @@ import (
 const (
 	ResourceReleaseMapping = "yoke-resource-release-mapping"
 	NSKubeSystem           = "kube-system"
-	yoke               = "yoke"
+	yoke                   = "yoke"
 	KeyRevisions           = "revisions"
 	KeyRelease             = "release"
 )
