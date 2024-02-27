@@ -1,13 +1,13 @@
-!yellow halloumi mayday
+!yellow yoke mayday
 
 !cyan Usage: 
-  halloumi mayday [flags] <release>
+  yoke mayday [flags] <release>
 
 !cyan Aliases:
   delete
 
 !cyan Examples:
   # delete a release and all its revision history
-  halloumi blackbox foo
+  yoke blackbox foo
 
 !cyan Flags:

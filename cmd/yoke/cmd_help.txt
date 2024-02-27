@@ -1,10 +1,10 @@
-!yellow Halloumi
+!yellow yoke
 
 !cyan What is it?
-halloumi is a helm inspired infrastructure-as-code (IaC) package deployer.
+yoke is a helm inspired infrastructure-as-code (IaC) package deployer.
 
 !cyan What does it do?
-Deploys "halloumi platters" to a kubernetes cluster.
+Deploys "yoke platters" to a kubernetes cluster.
 
 !cyan Available commands:
 takeoff   (aliases: up, apply)

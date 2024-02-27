@@ -18,8 +18,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/davidmdm/ansi"
-	"github.com/davidmdm/halloumi/internal"
-	"github.com/davidmdm/halloumi/internal/k8s"
+	"github.com/davidmdm/yoke/internal"
+	"github.com/davidmdm/yoke/internal/k8s"
 )
 
 type BlackboxParams struct {

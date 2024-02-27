@@ -1,4 +1,4 @@
-module github.com/davidmdm/halloumi
+module github.com/davidmdm/yoke
 
 go 1.22
 

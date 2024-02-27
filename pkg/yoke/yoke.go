@@ -1,4 +1,4 @@
-package halloumi
+package yoke
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/davidmdm/halloumi/internal"
-	"github.com/davidmdm/halloumi/internal/k8s"
+	"github.com/davidmdm/yoke/internal"
+	"github.com/davidmdm/yoke/internal/k8s"
 )
 
 type Client struct {

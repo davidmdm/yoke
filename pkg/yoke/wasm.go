@@ -1,4 +1,4 @@
-package halloumi
+package yoke
 
 import (
 	"context"

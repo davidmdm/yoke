@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/term"
 
-	"github.com/davidmdm/halloumi/internal"
+	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/x/xcontext"
 )
 

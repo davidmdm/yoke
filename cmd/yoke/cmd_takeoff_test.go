@@ -22,10 +22,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    halloumi/managed-by: halloumi
+    yoke/managed-by: yoke
   labels:
     app: sample-app
-    halloumi/release: foo
+    yoke/release: foo
   name: sample-app
 spec:
   replicas: 2

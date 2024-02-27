@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davidmdm/halloumi/internal"
-	"github.com/davidmdm/halloumi/pkg/halloumi"
+	"github.com/davidmdm/yoke/internal"
+	"github.com/davidmdm/yoke/pkg/yoke"
 )
 
 //go:embed cmd_descent_help.txt
@@ -61,12 +61,12 @@ func GetDescentfParams(settings GlobalSettings, args []string) (*DescentParams, 
 }
 
 func Descent(ctx context.Context, params DescentParams) error {
-	client, err := halloumi.FromKubeConfig(params.KubeConfigPath)
+	client, err := yoke.FromKubeConfig(params.KubeConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate k8 client: %w", err)
 	}
 
-	return client.Descent(ctx, halloumi.DescentParams{
+	return client.Descent(ctx, yoke.DescentParams{
 		Release:    params.Release,
 		RevisionID: params.RevisionID,
 	})

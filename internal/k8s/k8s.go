@@ -21,18 +21,18 @@ import (
 
 	"github.com/davidmdm/x/xerr"
 
-	"github.com/davidmdm/halloumi/internal"
+	"github.com/davidmdm/yoke/internal"
 )
 
 const (
-	ResourceReleaseMapping = "halloumi-resource-release-mapping"
+	ResourceReleaseMapping = "yoke-resource-release-mapping"
 	NSKubeSystem           = "kube-system"
-	Halloumi               = "halloumi"
+	yoke               = "yoke"
 	KeyRevisions           = "revisions"
 	KeyRelease             = "release"
 )
 
-func releaseName(release string) string { return Halloumi + "-" + release }
+func releaseName(release string) string { return yoke + "-" + release }
 
 type Client struct {
 	dynamic   *dynamic.DynamicClient
@@ -107,7 +107,7 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 		resource.GetName(),
 		resource,
 		metav1.ApplyOptions{
-			FieldManager: Halloumi,
+			FieldManager: yoke,
 			DryRun: func() []string {
 				if opts.DryRun {
 					return []string{metav1.DryRunAll}
@@ -185,14 +185,14 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 			&corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   name,
-					Labels: map[string]string{"internal.halloumi/kind": "revisions"},
+					Labels: map[string]string{"internal.yoke/kind": "revisions"},
 				},
 				Data: map[string]string{
 					KeyRelease:   release,
 					KeyRevisions: string(data),
 				},
 			},
-			metav1.CreateOptions{FieldManager: Halloumi},
+			metav1.CreateOptions{FieldManager: yoke},
 		)
 		return err
 	}
@@ -251,11 +251,11 @@ func (client Client) UpdateResourceReleaseMapping(ctx context.Context, release s
 				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:   ResourceReleaseMapping,
-						Labels: map[string]string{"internal.halloumi/kind": "resource-mapping"},
+						Labels: map[string]string{"internal.yoke/kind": "resource-mapping"},
 					},
 					Data: mapping,
 				},
-				metav1.CreateOptions{FieldManager: Halloumi},
+				metav1.CreateOptions{FieldManager: yoke},
 			)
 			return err
 		}
@@ -275,7 +275,7 @@ func (client Client) UpdateResourceReleaseMapping(ctx context.Context, release s
 			configMap.Data[value] = release
 		}
 
-		_, err = configMaps.Update(ctx, configMap, metav1.UpdateOptions{FieldManager: Halloumi})
+		_, err = configMaps.Update(ctx, configMap, metav1.UpdateOptions{FieldManager: yoke})
 		return err
 	})
 }
@@ -313,7 +313,7 @@ func (client Client) ValidateOwnership(ctx context.Context, release string, reso
 func (client Client) GetAllRevisions(ctx context.Context) ([]internal.Revisions, error) {
 	configMaps := client.clientset.CoreV1().ConfigMaps(NSKubeSystem)
 
-	configs, err := configMaps.List(ctx, metav1.ListOptions{LabelSelector: "internal.halloumi/kind=revisions"})
+	configs, err := configMaps.List(ctx, metav1.ListOptions{LabelSelector: "internal.yoke/kind=revisions"})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list revisions: %w", err)
 	}

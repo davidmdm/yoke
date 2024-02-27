@@ -1,22 +1,22 @@
-!yellow halloumi blackox
+!yellow yoke blackox
 
 !cyan Usage: 
-  halloumi blackbox [flags] [release] [revision-id] [revision-id-to-compare]
+  yoke blackbox [flags] [release] [revision-id] [revision-id-to-compare]
 
 !cyan Aliases:
   inspect
 
 !cyan Examples:
   # get an overview of all releases and their current revision id
-  halloumi blackbox
+  yoke blackbox
 
   # get an overview of all revisions for a given release
-  halloumi blackbox release
+  yoke blackbox release
 
   # render the resources for specific revision
-  halloumi blackbox release 42
+  yoke blackbox release 42
 
   # show list of resources by release
-  halloumi blackbox --mapping
+  yoke blackbox --mapping
 
 !cyan Flags:

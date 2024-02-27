@@ -14,7 +14,7 @@ func Version() error {
 	tbl := table.NewWriter()
 	tbl.SetStyle(table.StyleRounded)
 
-	tbl.AppendRow(table.Row{"halloumi", info.Main.Version})
+	tbl.AppendRow(table.Row{"yoke", info.Main.Version})
 
 	for _, mod := range info.Deps {
 		if !slices.Contains([]string{"k8s.io/client-go"}, mod.Path) {

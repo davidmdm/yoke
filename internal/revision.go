@@ -72,8 +72,8 @@ func AddHallmouiMetadata(resources []*unstructured.Unstructured, release string)
 		if labels == nil {
 			labels = make(map[string]string)
 		}
-		labels["app.kubernetes.io/managed-by"] = "halloumi"
-		labels["app.kubernetes.io/halloumi-release"] = release
+		labels["app.kubernetes.io/managed-by"] = "yoke"
+		labels["app.kubernetes.io/yoke-release"] = release
 		resource.SetLabels(labels)
 	}
 }

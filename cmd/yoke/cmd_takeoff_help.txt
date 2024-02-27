@@ -1,0 +1,25 @@
+!yellow yoke takeoff
+
+!cyan Usage: 
+  yoke takeoff [flags] <release-name> <platter-path>
+
+!cyan Aliases:
+  apply, up
+
+!cyan Examples:
+  # deploy a local platter
+  yoke takeoff my-release ./main.wasm
+
+  # deploy passing arguments to the platter
+  yoke takeoff my-release ./main.wasm -- -env prod
+
+  # deploy a remote platter
+  yoke takeoff my-release https://github.com/my_org/infra/releases/v1.2.3-release.wasm
+
+  # deploy a platter from a file
+  yoke takeoff my-release < resources.json
+
+  # deploy a platter from a unix pipe
+  generate-resources.sh | yoke takeoff my-releae
+
+!cyan Flags:

@@ -8,7 +8,7 @@ version: '3'
 tasks:
   fmt:
     cmds:
-      - goimports -local github.com/davidmdm,github.com/davidmdm/halloumi -w .
+      - goimports -local github.com/davidmdm,github.com/davidmdm/yoke -w .
       - gofumpt -w .
 
   test:

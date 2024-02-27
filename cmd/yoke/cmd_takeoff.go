@@ -16,9 +16,9 @@ import (
 
 	"github.com/davidmdm/x/xerr"
 
-	"github.com/davidmdm/halloumi/internal"
-	"github.com/davidmdm/halloumi/internal/wasi"
-	"github.com/davidmdm/halloumi/pkg/halloumi"
+	"github.com/davidmdm/yoke/internal"
+	"github.com/davidmdm/yoke/internal/wasi"
+	"github.com/davidmdm/yoke/pkg/yoke"
 )
 
 type TakeoffPlatterParams struct {
@@ -94,12 +94,12 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return ExportToFS(params.Out, params.Release, resources)
 	}
 
-	client, err := halloumi.FromKubeConfig(params.KubeConfigPath)
+	client, err := yoke.FromKubeConfig(params.KubeConfigPath)
 	if err != nil {
 		return err
 	}
 
-	return client.Takeoff(ctx, halloumi.TakeoffParams{
+	return client.Takeoff(ctx, yoke.TakeoffParams{
 		Release:   params.Release,
 		Resources: resources,
 		PlatterID: params.Platter.Path,
@@ -146,7 +146,7 @@ func EvalPlatter(ctx context.Context, release string, platter TakeoffPlatterPara
 		return output, nil, err
 	}
 
-	wasm, err := halloumi.LoadWasm(ctx, platter.Path)
+	wasm, err := yoke.LoadWasm(ctx, platter.Path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read wasm program: %w", err)
 	}
