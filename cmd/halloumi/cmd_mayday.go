@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/davidmdm/halloumi/internal"
-	"github.com/davidmdm/halloumi/internal/k8"
+	"github.com/davidmdm/halloumi/internal/k8s"
 )
 
 type MaydayParams struct {
@@ -53,7 +53,7 @@ func Mayday(ctx context.Context, params MaydayParams) error {
 		return fmt.Errorf("failed to build k8 config: %w", err)
 	}
 
-	client, err := k8.NewClient(restcfg)
+	client, err := k8s.NewClient(restcfg)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate k8 client: %w", err)
 	}
