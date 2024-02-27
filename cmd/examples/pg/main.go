@@ -7,9 +7,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/davidmdm/halloumi/pkg/helm"
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
+
+	"github.com/davidmdm/halloumi/pkg/helm"
 )
 
 func main() {
