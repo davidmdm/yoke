@@ -7,10 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"k8s.io/client-go/tools/clientcmd"
-
 	"github.com/davidmdm/halloumi/internal"
-	"github.com/davidmdm/halloumi/internal/k8s"
+	"github.com/davidmdm/halloumi/pkg/halloumi"
 )
 
 type MaydayParams struct {
@@ -48,33 +46,9 @@ func GetMaydayParams(settings GlobalSettings, args []string) (*MaydayParams, err
 }
 
 func Mayday(ctx context.Context, params MaydayParams) error {
-	restcfg, err := clientcmd.BuildConfigFromFlags("", params.KubeConfigPath)
-	if err != nil {
-		return fmt.Errorf("failed to build k8 config: %w", err)
-	}
-
-	client, err := k8s.NewClient(restcfg)
+	client, err := halloumi.FromKubeConfig(params.KubeConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate k8 client: %w", err)
 	}
-
-	revisions, err := client.GetRevisions(ctx, params.Release)
-	if err != nil {
-		return fmt.Errorf("failed to get revision history for release: %w", err)
-	}
-
-	removed, err := client.RemoveOrphans(ctx, revisions.CurrentResources(), nil)
-	if err != nil {
-		return fmt.Errorf("failed to delete resources: %w", err)
-	}
-
-	if err := client.UpdateResourceReleaseMapping(ctx, params.Release, nil, internal.CanonicalNameList(removed)); err != nil {
-		return fmt.Errorf("failed to update resource to release mapping: %w", err)
-	}
-
-	if err := client.DeleteRevisions(ctx, params.Release); err != nil {
-		return fmt.Errorf("failed to delete revision history: %w", err)
-	}
-
-	return nil
+	return client.Mayday(ctx, params.Release)
 }
