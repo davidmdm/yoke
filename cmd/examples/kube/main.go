@@ -38,12 +38,14 @@ func run() error {
 				WithSelector(metav1.LabelSelector().WithMatchLabels(labels)).
 				WithTemplate(
 					corev1.PodTemplateSpec().
-						WithLabels(labels).WithSpec(corev1.PodSpec().WithContainers(
-						corev1.Container().
-							WithName(name).
-							WithImage("alpine:latest").
-							WithCommand("watch", "echo", "hello", "world"),
-					)),
+						WithLabels(labels).
+						WithSpec(
+							corev1.PodSpec().WithContainers(
+								corev1.Container().
+									WithName(name).
+									WithImage("alpine:latest").
+									WithCommand("watch", "echo", "hello", "world"),
+							)),
 				),
 		)
 
