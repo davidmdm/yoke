@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/davidmdm/x/xerr"
@@ -37,6 +38,14 @@ type Client struct {
 	dynamic   *dynamic.DynamicClient
 	discovery *discovery.DiscoveryClient
 	clientset *kubernetes.Clientset
+}
+
+func NewClientFromKubeConfig(path string) (*Client, error) {
+	restcfg, err := clientcmd.BuildConfigFromFlags("", path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build k8 config: %w", err)
+	}
+	return NewClient(restcfg)
 }
 
 func NewClient(cfg *rest.Config) (*Client, error) {

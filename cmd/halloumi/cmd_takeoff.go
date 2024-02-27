@@ -3,28 +3,22 @@ package main
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
-	"slices"
 	"strings"
 
 	y3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/davidmdm/x/xerr"
 
 	"github.com/davidmdm/halloumi/internal"
-	"github.com/davidmdm/halloumi/internal/k8s"
 	"github.com/davidmdm/halloumi/internal/wasi"
+	"github.com/davidmdm/halloumi/pkg/halloumi"
 )
 
 type TakeoffPlatterParams struct {
@@ -81,26 +75,9 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 }
 
 func TakeOff(ctx context.Context, params TakeoffParams) error {
-	output, wasm, err := func() ([]byte, []byte, error) {
-		if params.Platter.Input != nil && params.Platter.Path == "" {
-			output, err := io.ReadAll(params.Platter.Input)
-			return output, nil, err
-		}
-
-		wasm, err := LoadWasm(ctx, params.Platter.Path)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to read wasm program: %w", err)
-		}
-
-		output, err := wasi.Execute(ctx, wasm, params.Release, params.Platter.Input, params.Platter.Args...)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to execute wasm: %w", err)
-		}
-
-		return output, wasm, nil
-	}()
+	output, wasm, err := EvalPlatter(ctx, params.Release, params.Platter)
 	if err != nil {
-		return fmt.Errorf("failed to load platter: %w", err)
+		return fmt.Errorf("failed to evaluate platter: %w", err)
 	}
 
 	var resources internal.List[*unstructured.Unstructured]
@@ -117,82 +94,17 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return ExportToFS(params.Out, params.Release, resources)
 	}
 
-	restcfg, err := clientcmd.BuildConfigFromFlags("", params.KubeConfigPath)
+	client, err := halloumi.FromKubeConfig(params.KubeConfigPath)
 	if err != nil {
-		return fmt.Errorf("failed to build k8 config: %w", err)
+		return err
 	}
 
-	client, err := k8s.NewClient(restcfg)
-	if err != nil {
-		return fmt.Errorf("failed to instantiate k8 client: %w", err)
-	}
-
-	revisions, err := client.GetRevisions(ctx, params.Release)
-	if err != nil {
-		return fmt.Errorf("failed to get revision history: %w", err)
-	}
-
-	previous := revisions.CurrentResources()
-
-	if reflect.DeepEqual(previous, []*unstructured.Unstructured(resources)) {
-		return internal.Warning("resources are the same as previous revision: skipping takeoff")
-	}
-
-	if err := client.ValidateOwnership(ctx, params.Release, resources); err != nil {
-		return fmt.Errorf("failed to validate ownership: %w", err)
-	}
-
-	if err := client.ApplyResources(ctx, resources); err != nil {
-		return fmt.Errorf("failed to apply resources: %w", err)
-	}
-
-	revisions.Add(resources, params.Platter.Path, wasm)
-
-	if err := client.UpsertRevisions(ctx, params.Release, revisions); err != nil {
-		return fmt.Errorf("failed to create revision: %w", err)
-	}
-
-	removed, err := client.RemoveOrphans(ctx, previous, resources)
-	if err != nil {
-		return fmt.Errorf("failed to remove orhpans: %w", err)
-	}
-
-	var (
-		createdNames = internal.CanonicalNameList(resources)
-		removedNames = internal.CanonicalNameList(removed)
-	)
-
-	if err := client.UpdateResourceReleaseMapping(ctx, params.Release, createdNames, removedNames); err != nil {
-		return fmt.Errorf("failed to update resource release mapping: %w", err)
-	}
-
-	return nil
-}
-
-func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
-	uri, _ := url.Parse(path)
-	if uri.Scheme == "" {
-		return os.ReadFile(path)
-	}
-
-	if !slices.Contains([]string{":http", ":https"}, uri.Scheme) {
-		return nil, errors.New("unsupported protocol: %s - http(s) supported only")
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "GET", uri.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get response: %w", err)
-	}
-	defer func() {
-		err = xerr.MultiErrFrom("", err, resp.Body.Close())
-	}()
-
-	return io.ReadAll(resp.Body)
+	return client.Takeoff(ctx, halloumi.TakeoffParams{
+		Release:   params.Release,
+		Resources: resources,
+		PlatterID: params.Platter.Path,
+		Wasm:      wasm,
+	})
 }
 
 func ExportToFS(dir, release string, resources []*unstructured.Unstructured) error {
@@ -226,4 +138,23 @@ func ExportToStdout(resources []*unstructured.Unstructured) error {
 	encoder := y3.NewEncoder(os.Stdout)
 	encoder.SetIndent(2)
 	return encoder.Encode(output)
+}
+
+func EvalPlatter(ctx context.Context, release string, platter TakeoffPlatterParams) ([]byte, []byte, error) {
+	if platter.Input != nil && platter.Path == "" {
+		output, err := io.ReadAll(platter.Input)
+		return output, nil, err
+	}
+
+	wasm, err := halloumi.LoadWasm(ctx, platter.Path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read wasm program: %w", err)
+	}
+
+	output, err := wasi.Execute(ctx, wasm, release, platter.Input, platter.Args...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to execute wasm: %w", err)
+	}
+
+	return output, wasm, nil
 }
