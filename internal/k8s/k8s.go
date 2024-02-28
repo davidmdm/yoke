@@ -291,7 +291,12 @@ func (client Client) GetResourceReleaseMapping(ctx context.Context) (map[string]
 		return nil, err
 	}
 
-	return configMap.Data, nil
+	mapping := configMap.Data
+	if mapping == nil {
+		mapping = make(map[string]string)
+	}
+
+	return mapping, nil
 }
 
 func (client Client) ValidateOwnership(ctx context.Context, release string, resources []*unstructured.Unstructured) error {
