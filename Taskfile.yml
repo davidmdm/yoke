@@ -16,6 +16,12 @@ tasks:
       - kind delete cluster && kind create cluster
       - go test -coverprofile cover.out -p 1 -v ./...
 
+  wasm:
+    cmds:
+      - task: kube
+      - task: pg
+      - task: redis
+
   kube:
     cmds:
       - GOOS=wasip1 GOARCH=wasm go build -o kube.wasm ./cmd/examples/kube
