@@ -24,8 +24,7 @@ func main() {
 var pg embed.FS
 
 func run() error {
-	var values map[string]any
-
+	var values Values
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		if err := yaml.NewDecoder(os.Stdin).Decode(&values); err != nil && err != io.EOF {
 			return fmt.Errorf("failed to decode stdin: %w", err)
