@@ -8,9 +8,9 @@ yoke is a Helm-inspired infrastructure-as-code (IaC) package deployer.
 
 The philosophy behind yoke is that Kubernetes packages should be described via code. Programming environments have control flow, test frameworks, static typing, documentation, error management, and versioning. They are ideal for building contracts and enforcing them.
 
-yoke deploys "platters" to Kubernetes (think helm charts or packages). A platter is a wasm executable that outputs the Kubernetes resources making up the package as JSON/YAML to stdout.
+yoke deploys "flights" to Kubernetes (think helm charts or packages). A flight is a wasm executable that outputs the Kubernetes resources making up the package as JSON/YAML to stdout.
 
-yoke embeds a pure-Go wasm runtime (wazero) and deploys your platter to Kubernetes. It keeps track of the different revisions for any given release and provides capabilities such as rollbacks and inspection. For ArgoCD compatibility, it can render the platter to the filesystem as raw YAML resources.
+yoke embeds a pure-Go wasm runtime (wazero) and deploys your flight to Kubernetes. It keeps track of the different revisions for any given release and provides capabilities such as rollbacks and inspection. For ArgoCD compatibility, it can render the flight to the filesystem as raw YAML resources.
 
 ## Theme
 
@@ -29,14 +29,14 @@ go install github.com/davidmdm/yoke/cmd/yoke@latest
 ### takeoff (deploy / up)
 
 ```bash
-# deploy local yoke platter
+# deploy local yoke flight
 yoke takeoff my-release ./release.wasm
 
-# deploy local yoke platter and pass arguments to it
+# deploy local yoke flight and pass arguments to it
 yoke takeoff my-release ./release.wasm -- [args...]
 
-# deploy remote yoke platter via http
-yoke takeoff my-release https://github.com/my_org/infra/releases/platter-v0.1.0.wasm -- [args...]
+# deploy remote yoke flight via http
+yoke takeoff my-release https://github.com/my_org/infra/releases/flight-v0.1.0.wasm -- [args...]
 ```
 
 ### descent (rollback / down)

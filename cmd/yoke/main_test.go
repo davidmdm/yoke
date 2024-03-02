@@ -52,7 +52,7 @@ func TestCreateDeleteCycle(t *testing.T) {
 	params := TakeoffParams{
 		GlobalSettings: settings,
 		Release:        "foo",
-		Platter: TakeoffPlatterParams{
+		Flight: TakeoffFlightParams{
 			Input: createBasicDeployment(t, "sample-app", "default"),
 		},
 	}
@@ -112,7 +112,7 @@ func TestFailApplyDryRun(t *testing.T) {
 	params := TakeoffParams{
 		GlobalSettings: settings,
 		Release:        "foo",
-		Platter: TakeoffPlatterParams{
+		Flight: TakeoffFlightParams{
 			Input: createBasicDeployment(t, "sample-app", "does-not-exist"),
 		},
 	}

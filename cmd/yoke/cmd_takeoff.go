@@ -21,7 +21,7 @@ import (
 	"github.com/davidmdm/yoke/pkg/yoke"
 )
 
-type TakeoffPlatterParams struct {
+type TakeoffFlightParams struct {
 	Path  string
 	Input io.Reader
 	Args  []string
@@ -30,7 +30,7 @@ type TakeoffPlatterParams struct {
 type TakeoffParams struct {
 	GlobalSettings
 	Release string
-	Platter TakeoffPlatterParams
+	Flight  TakeoffFlightParams
 	Out     string
 }
 
@@ -51,33 +51,33 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 
 	params := TakeoffParams{
 		GlobalSettings: settings,
-		Platter:        TakeoffPlatterParams{Input: source},
+		Flight:         TakeoffFlightParams{Input: source},
 	}
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
-	flagset.StringVar(&params.Out, "out", "", "if present outputs platter resources to directory specified, if out is - outputs to standard out")
+	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
 
-	args, params.Platter.Args = internal.CutArgs(args)
+	args, params.Flight.Args = internal.CutArgs(args)
 
 	flagset.Parse(args)
 
 	params.Release = flagset.Arg(0)
-	params.Platter.Path = flagset.Arg(1)
+	params.Flight.Path = flagset.Arg(1)
 
 	if params.Release == "" {
 		return nil, fmt.Errorf("release is required as first positional arg")
 	}
-	if params.Platter.Input == nil && params.Platter.Path == "" {
-		return nil, fmt.Errorf("platter-path is required as second position arg")
+	if params.Flight.Input == nil && params.Flight.Path == "" {
+		return nil, fmt.Errorf("flight-path is required as second position arg")
 	}
 
 	return &params, nil
 }
 
 func TakeOff(ctx context.Context, params TakeoffParams) error {
-	output, wasm, err := EvalPlatter(ctx, params.Release, params.Platter)
+	output, wasm, err := EvalFlight(ctx, params.Release, params.Flight)
 	if err != nil {
-		return fmt.Errorf("failed to evaluate platter: %w", err)
+		return fmt.Errorf("failed to evaluate flight: %w", err)
 	}
 
 	var resources internal.List[*unstructured.Unstructured]
@@ -102,7 +102,7 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 	return client.Takeoff(ctx, yoke.TakeoffParams{
 		Release:   params.Release,
 		Resources: resources,
-		PlatterID: params.Platter.Path,
+		FlightID:  params.Flight.Path,
 		Wasm:      wasm,
 	})
 }
@@ -111,7 +111,7 @@ func ExportToFS(dir, release string, resources []*unstructured.Unstructured) err
 	root := filepath.Join(dir, release)
 
 	if err := os.RemoveAll(root); err != nil {
-		return fmt.Errorf("failed remove previous platter export: %w", err)
+		return fmt.Errorf("failed remove previous flight export: %w", err)
 	}
 
 	if err := os.MkdirAll(root, 0o755); err != nil {
@@ -140,18 +140,18 @@ func ExportToStdout(resources []*unstructured.Unstructured) error {
 	return encoder.Encode(output)
 }
 
-func EvalPlatter(ctx context.Context, release string, platter TakeoffPlatterParams) ([]byte, []byte, error) {
-	if platter.Input != nil && platter.Path == "" {
-		output, err := io.ReadAll(platter.Input)
+func EvalFlight(ctx context.Context, release string, flight TakeoffFlightParams) ([]byte, []byte, error) {
+	if flight.Input != nil && flight.Path == "" {
+		output, err := io.ReadAll(flight.Input)
 		return output, nil, err
 	}
 
-	wasm, err := yoke.LoadWasm(ctx, platter.Path)
+	wasm, err := yoke.LoadWasm(ctx, flight.Path)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read wasm program: %w", err)
 	}
 
-	output, err := wasi.Execute(ctx, wasm, release, platter.Input, platter.Args...)
+	output, err := wasi.Execute(ctx, wasm, release, flight.Input, flight.Args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to execute wasm: %w", err)
 	}

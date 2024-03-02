@@ -26,7 +26,7 @@ func FromKubeConfig(path string) (*Client, error) {
 type TakeoffParams struct {
 	Release   string
 	Resources []*unstructured.Unstructured
-	PlatterID string
+	FlightID  string
 	Wasm      []byte
 }
 
@@ -50,7 +50,7 @@ func (client Client) Takeoff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
-	revisions.Add(params.Resources, params.PlatterID, params.Wasm)
+	revisions.Add(params.Resources, params.FlightID, params.Wasm)
 
 	if err := client.k8s.UpsertRevisions(ctx, params.Release, revisions); err != nil {
 		return fmt.Errorf("failed to create revision: %w", err)
