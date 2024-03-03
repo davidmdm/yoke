@@ -2,16 +2,22 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 
+	"github.com/davidmdm/ansi"
 	"github.com/davidmdm/x/xcontext"
 	"github.com/davidmdm/yoke/internal/home"
+)
+
+var (
+	cache        = filepath.Join(home.Dir, ".cache/yoke")
+	schemaGenDir = filepath.Join(cache, "readme-generator-for-helm")
 )
 
 func main() {
@@ -38,34 +44,12 @@ func run() error {
 	ctx, cancel := xcontext.WithSignalCancelation(context.Background(), syscall.SIGINT)
 	defer cancel()
 
-	cache := filepath.Join(home.Dir, ".cache/yoke")
-
-	if err := os.MkdirAll(cache, 0o755); err != nil {
-		return fmt.Errorf("failed to ensure yoke cache: %w", err)
+	if err := ensureReadmeGenerator(ctx); err != nil {
+		return fmt.Errorf("failed to ensure bitnami/readme-generator installation: %w", err)
 	}
 
-	schemaGenDir := filepath.Join(cache, "readme-generator-for-helm")
-
-	if _, err := os.Stat(schemaGenDir); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("reading cached helm schema generator: %w", err)
-		}
-
-		clone := exec.CommandContext(ctx, "git", "clone", "https://github.com/bitnami/readme-generator-for-helm")
-		if err := x(clone, WithDir(cache)); err != nil {
-			return fmt.Errorf("failed to clone schema generator: %w", err)
-		}
-
-		downloadDeps := exec.CommandContext(ctx, "npm", "install")
-		if err := x(downloadDeps, WithDir(schemaGenDir)); err != nil {
-			return fmt.Errorf("failed to download schema generator dependencies: %w", err)
-		}
-	}
-
-	if x(exec.CommandContext(ctx, "command", "-v", "go-jsonschema")) != nil {
-		if err := x(exec.CommandContext(ctx, "go", "install", "github.com/atombender/go-jsonschema@latest")); err != nil {
-			return fmt.Errorf("failed to install oapi-codegen: %w", err)
-		}
+	if err := ensureGoJsonSchema(ctx); err != nil {
+		return fmt.Errorf("failed to ensure go-jsonschema installation: %w", err)
 	}
 
 	*values, _ = filepath.Abs(*values)
@@ -87,6 +71,39 @@ func run() error {
 	return nil
 }
 
+func ensureReadmeGenerator(ctx context.Context) error {
+	if err := os.MkdirAll(cache, 0o755); err != nil {
+		return fmt.Errorf("failed to ensure yoke cache: %w", err)
+	}
+
+	if _, err := os.Stat(schemaGenDir); err != nil {
+		clone := exec.CommandContext(ctx, "git", "clone", "https://github.com/bitnami/readme-generator-for-helm")
+		if err := x(clone, WithDir(cache)); err != nil {
+			return fmt.Errorf("failed to clone schema generator: %w", err)
+		}
+
+		downloadDeps := exec.CommandContext(ctx, "npm", "install")
+		if err := x(downloadDeps, WithDir(schemaGenDir)); err != nil {
+			return fmt.Errorf("failed to download schema generator dependencies: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func ensureGoJsonSchema(ctx context.Context) error {
+	if x(exec.CommandContext(ctx, "command", "-v", "go-jsonschema")) == nil {
+		return nil
+	}
+	if err := x(exec.CommandContext(ctx, "go", "install", "github.com/atombender/go-jsonschema@latest")); err != nil {
+		return fmt.Errorf("failed to install go-jsonschema: %w", err)
+	}
+
+	return nil
+}
+
+var cyan = ansi.MakeStyle(ansi.FgCyan).Sprint
+
 func x(cmd *exec.Cmd, opts ...XOpt) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -96,7 +113,8 @@ func x(cmd *exec.Cmd, opts ...XOpt) error {
 	}
 
 	fmt.Println()
-	fmt.Println("running:", cmd.Args)
+	fmt.Println("running:", cyan(strings.Join(cmd.Args, " ")))
+	fmt.Println()
 
 	return cmd.Run()
 }

@@ -66,7 +66,17 @@ func LoadChartFromZippedArchive(data []byte) (chart *Chart, err error) {
 		return nil, err
 	}
 
-	return &Chart{underlyingChart}, nil
+	var values []byte
+	for _, f := range files {
+		if f.Name == "values.yaml" {
+			values = f.Data
+		}
+	}
+
+	return &Chart{
+		Chart:  underlyingChart,
+		values: values,
+	}, nil
 }
 
 func LoadChartFromFS(fs embed.FS) (*Chart, error) {
@@ -82,11 +92,22 @@ func LoadChartFromFS(fs embed.FS) (*Chart, error) {
 		return nil, err
 	}
 
-	return &Chart{underlyingChart}, nil
+	var values []byte
+	for _, f := range files {
+		if f.Name == "values.yaml" {
+			values = f.Data
+		}
+	}
+
+	return &Chart{
+		Chart:  underlyingChart,
+		values: values,
+	}, nil
 }
 
 type Chart struct {
 	*chart.Chart
+	values []byte
 }
 
 func (chart Chart) Render(release, namespace string, values any) ([]*unstructured.Unstructured, error) {
