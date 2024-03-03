@@ -103,12 +103,15 @@ func run() error {
 	valuesFile := filepath.Join(os.TempDir(), "raw")
 
 	err = func() error {
-		if chart.Schema != nil {
-			if err := os.WriteFile(schemaFile, chart.Schema, 0o644); err != nil {
-				return fmt.Errorf("failed to write schema to temp file: %w", err)
-			}
-		}
+		// if len(chart.Schema) > 0 {
+		// 	fmt.Println("using charts builtin schema")
+		// 	if err := os.WriteFile(schemaFile, chart.Schema, 0o644); err != nil {
+		// 		return fmt.Errorf("failed to write schema to temp file: %w", err)
+		// 	}
+		// 	return nil
+		// }
 
+		fmt.Println("inferring schema from values file")
 		if err := os.WriteFile(valuesFile, chart.Values, 0o644); err != nil {
 			return fmt.Errorf("failed to write values to temp file: %w", err)
 		}
