@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"flag"
 	"fmt"
 	"os"
@@ -9,16 +10,30 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"text/template"
 
 	"github.com/davidmdm/ansi"
 	"github.com/davidmdm/x/xcontext"
 	"github.com/davidmdm/yoke/internal/home"
+	"github.com/davidmdm/yoke/pkg/helm"
 )
 
 var (
-	cache        = filepath.Join(home.Dir, ".cache/yoke")
-	schemaGenDir = filepath.Join(cache, "readme-generator-for-helm")
+	cache          = filepath.Join(home.Dir, ".cache/yoke")
+	schemaGenDir   = filepath.Join(cache, "readme-generator-for-helm")
+	flightTemplate *template.Template
 )
+
+//go:embed flight.go.tpl
+var ft string
+
+func init() {
+	tpl, err := template.New("").Parse(ft)
+	if err != nil {
+		panic(err)
+	}
+	flightTemplate = tpl
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -28,17 +43,16 @@ func main() {
 }
 
 func run() error {
-	packageName := flag.String("package", "values", "package name for generate types")
-	values := flag.String("values", "", "path to values file")
-	out := flag.String("out", "", "path to outputfile for generated go types")
+	repo := flag.String("repo", "", "bitnami repo to turn into a flight function")
+	outDir := flag.String("outdir", "", "outdir for the flight package")
 
 	flag.Parse()
 
-	if *values == "" {
-		return fmt.Errorf("-values is required")
+	if *repo == "" {
+		return fmt.Errorf("-repo is required")
 	}
-	if *out == "" {
-		return fmt.Errorf("-out is required")
+	if *outDir == "" {
+		return fmt.Errorf("-outdir is required")
 	}
 
 	ctx, cancel := xcontext.WithSignalCancelation(context.Background(), syscall.SIGINT)
@@ -52,23 +66,84 @@ func run() error {
 		return fmt.Errorf("failed to ensure go-jsonschema installation: %w", err)
 	}
 
-	*values, _ = filepath.Abs(*values)
-	*out, _ = filepath.Abs(*out)
-
-	schemaFile := filepath.Join(os.TempDir(), "values")
-
-	genSchema := exec.CommandContext(ctx, "node", "./bin/index.js", "-v", *values, "-s", schemaFile)
-
-	if err := x(genSchema, WithDir(schemaGenDir)); err != nil {
-		return fmt.Errorf("failed to generate jsonschema: %w", err)
+	*outDir, _ = filepath.Abs(*outDir)
+	if err := os.MkdirAll(*outDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create outdir: %w", err)
 	}
 
-	genGoTypes := exec.CommandContext(ctx, "go-jsonschema", schemaFile, "-o", *out, "-p", *packageName, "--only-models")
+	cmd := exec.CommandContext(ctx, "helm", "pull", *repo)
+	if err := x(cmd, WithDir(*outDir)); err != nil {
+		return fmt.Errorf("failed to pull helm repo: %w", err)
+	}
+
+	entries, err := os.ReadDir(*outDir)
+	if err != nil {
+		return fmt.Errorf("failed to read outdir: %w", err)
+	}
+
+	var archive string
+	for _, entry := range entries {
+		if filepath.Ext(entry.Name()) == ".tgz" {
+			archive = filepath.Join(*outDir, entry.Name())
+		}
+	}
+
+	archiveData, err := os.ReadFile(archive)
+	if err != nil {
+		return err
+	}
+
+	chart, err := helm.LoadChartFromZippedArchive(archiveData)
+	if err != nil {
+		return fmt.Errorf("failed to load chart: %w", err)
+	}
+
+	// schemaFile must be called values for the generation to use: type Values
+	schemaFile := filepath.Join(os.TempDir(), "values")
+	valuesFile := filepath.Join(os.TempDir(), "raw")
+
+	err = func() error {
+		if chart.Schema != nil {
+			if err := os.WriteFile(schemaFile, chart.Schema, 0o644); err != nil {
+				return fmt.Errorf("failed to write schema to temp file: %w", err)
+			}
+		}
+
+		if err := os.WriteFile(valuesFile, chart.Values, 0o644); err != nil {
+			return fmt.Errorf("failed to write values to temp file: %w", err)
+		}
+
+		genSchema := exec.CommandContext(ctx, "node", "./bin/index.js", "-v", valuesFile, "-s", schemaFile)
+		if err := x(genSchema, WithDir(schemaGenDir)); err != nil {
+			return fmt.Errorf("failed to generate jsonschema: %w", err)
+		}
+
+		return nil
+	}()
+	if err != nil {
+		return fmt.Errorf("failed create schema: %w", err)
+	}
+
+	packageName := filepath.Base(*outDir)
+
+	genGoTypes := exec.CommandContext(ctx, "go-jsonschema", schemaFile, "-o", filepath.Join(*outDir, "values.go"), "-p", packageName, "--only-models")
 	if err := x(genGoTypes); err != nil {
 		return fmt.Errorf("failed to gen go types: %w", err)
 	}
 
-	return nil
+	flight, err := os.Create(filepath.Join(*outDir, "flight.go"))
+	if err != nil {
+		return err
+	}
+	defer flight.Close()
+
+	return flightTemplate.Execute(flight, struct {
+		Archive string
+		Package string
+	}{
+		Archive: filepath.Base(archive),
+		Package: packageName,
+	})
 }
 
 func ensureReadmeGenerator(ctx context.Context) error {

@@ -75,7 +75,7 @@ func LoadChartFromZippedArchive(data []byte) (chart *Chart, err error) {
 
 	return &Chart{
 		Chart:  underlyingChart,
-		values: values,
+		Values: values,
 	}, nil
 }
 
@@ -101,13 +101,13 @@ func LoadChartFromFS(fs embed.FS) (*Chart, error) {
 
 	return &Chart{
 		Chart:  underlyingChart,
-		values: values,
+		Values: values,
 	}, nil
 }
 
 type Chart struct {
 	*chart.Chart
-	values []byte
+	Values []byte
 }
 
 func (chart Chart) Render(release, namespace string, values any) ([]*unstructured.Unstructured, error) {
