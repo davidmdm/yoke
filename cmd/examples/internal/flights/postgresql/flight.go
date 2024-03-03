@@ -1,4 +1,4 @@
-package {{ .Package }}
+package postgresql
 
 import (
 	_ "embed"
@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-//go:embed {{ .Archive }}
+//go:embed postgresql-14.2.3.tgz
 var archive []byte
 
 func RenderChart(release, namespace string, values *Values) ([]*unstructured.Unstructured, error) {

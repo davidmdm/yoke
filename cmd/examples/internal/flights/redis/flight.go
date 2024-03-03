@@ -1,4 +1,4 @@
-package {{ .Package }}
+package redis
 
 import (
 	_ "embed"
@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-//go:embed {{ .Archive }}
+//go:embed redis-18.17.0.tgz
 var archive []byte
 
 func RenderChart(release, namespace string, values *Values) ([]*unstructured.Unstructured, error) {
