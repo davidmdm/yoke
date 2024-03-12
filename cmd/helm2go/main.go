@@ -44,6 +44,7 @@ func main() {
 
 func run() error {
 	repo := flag.String("repo", "", "bitnami repo to turn into a flight function")
+	useSchema := flag.Bool("schema", false, "prefer schema over parsing values file")
 	outDir := flag.String("outdir", "", "outdir for the flight package")
 
 	flag.Parse()
@@ -103,13 +104,16 @@ func run() error {
 	valuesFile := filepath.Join(os.TempDir(), "raw")
 
 	err = func() error {
-		// if len(chart.Schema) > 0 {
-		// 	fmt.Println("using charts builtin schema")
-		// 	if err := os.WriteFile(schemaFile, chart.Schema, 0o644); err != nil {
-		// 		return fmt.Errorf("failed to write schema to temp file: %w", err)
-		// 	}
-		// 	return nil
-		// }
+		if *useSchema {
+			if len(chart.Schema) > 0 {
+				fmt.Println("using charts builtin schema")
+				if err := os.WriteFile(schemaFile, chart.Schema, 0o644); err != nil {
+					return fmt.Errorf("failed to write schema to temp file: %w", err)
+				}
+				return nil
+			}
+			fmt.Println("schema not found in chart")
+		}
 
 		fmt.Println("inferring schema from values file")
 		if err := os.WriteFile(valuesFile, chart.Values, 0o644); err != nil {
