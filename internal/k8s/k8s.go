@@ -12,7 +12,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -36,7 +35,6 @@ func releaseName(release string) string { return yoke + "-" + release }
 
 type Client struct {
 	dynamic   *dynamic.DynamicClient
-	discovery *discovery.DiscoveryClient
 	clientset *kubernetes.Clientset
 }
 
@@ -59,14 +57,8 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 		return nil, fmt.Errorf("failed to create k8 clientset: %w", err)
 	}
 
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create discovery client component: %w", err)
-	}
-
 	return &Client{
 		dynamic:   dynamicClient,
-		discovery: discoveryClient,
 		clientset: clientset,
 	}, nil
 }
@@ -210,7 +202,7 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 func (client Client) getDynamicResourceInterface(resource *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
 	gvk := schema.FromAPIVersionAndKind(resource.GetAPIVersion(), resource.GetKind())
 
-	resources, err := client.discovery.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
+	resources, err := client.clientset.DiscoveryClient.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover resources for %s: %w", gvk.GroupVersion().String(), err)
 	}
