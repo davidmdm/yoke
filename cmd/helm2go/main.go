@@ -18,6 +18,12 @@ import (
 	"github.com/davidmdm/yoke/pkg/helm"
 )
 
+var yellow = ansi.MakeStyle(ansi.FgYellow)
+
+func debug(format string, args ...any) {
+	yellow.Printf("\n"+format+"\n", args...)
+}
+
 var (
 	cache          = filepath.Join(home.Dir, ".cache/yoke")
 	schemaGenDir   = filepath.Join(cache, "readme-generator-for-helm")
@@ -106,16 +112,16 @@ func run() error {
 	err = func() error {
 		if *useSchema {
 			if len(chart.Schema) > 0 {
-				fmt.Println("using charts builtin schema")
+				debug("using charts builtin schema")
 				if err := os.WriteFile(schemaFile, chart.Schema, 0o644); err != nil {
 					return fmt.Errorf("failed to write schema to temp file: %w", err)
 				}
 				return nil
 			}
-			fmt.Println("schema not found in chart")
+			debug("schema not found in chart")
 		}
 
-		fmt.Println("inferring schema from values file")
+		debug("inferring schema from values file")
 		if err := os.WriteFile(valuesFile, chart.Values, 0o644); err != nil {
 			return fmt.Errorf("failed to write values to temp file: %w", err)
 		}
