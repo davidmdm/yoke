@@ -63,16 +63,22 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 	}, nil
 }
 
-func (client Client) ApplyResources(ctx context.Context, resources []*unstructured.Unstructured) error {
-	var errs []error
-	for _, resource := range resources {
-		if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: true}); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", internal.Canonical(resource), err))
-		}
-	}
+type ApplyResourcesOpts struct {
+	SkipDryRun bool
+}
 
-	if err := xerr.MultiErrOrderedFrom("dry run", errs...); err != nil {
-		return err
+func (client Client) ApplyResources(ctx context.Context, resources []*unstructured.Unstructured, opts ApplyResourcesOpts) error {
+	var errs []error
+
+	if !opts.SkipDryRun {
+		for _, resource := range resources {
+			if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: true}); err != nil {
+				errs = append(errs, fmt.Errorf("%s: %w", internal.Canonical(resource), err))
+			}
+		}
+		if err := xerr.MultiErrOrderedFrom("dry run", errs...); err != nil {
+			return err
+		}
 	}
 
 	for _, resource := range resources {

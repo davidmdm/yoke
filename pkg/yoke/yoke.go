@@ -24,10 +24,11 @@ func FromKubeConfig(path string) (*Client, error) {
 }
 
 type TakeoffParams struct {
-	Release   string
-	Resources []*unstructured.Unstructured
-	FlightID  string
-	Wasm      []byte
+	Release    string
+	Resources  []*unstructured.Unstructured
+	FlightID   string
+	Wasm       []byte
+	SkipDryRun bool
 }
 
 func (client Client) Takeoff(ctx context.Context, params TakeoffParams) error {
@@ -46,7 +47,8 @@ func (client Client) Takeoff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to validate ownership: %w", err)
 	}
 
-	if err := client.k8s.ApplyResources(ctx, params.Resources); err != nil {
+	applyOpts := k8s.ApplyResourcesOpts{SkipDryRun: params.SkipDryRun}
+	if err := client.k8s.ApplyResources(ctx, params.Resources, applyOpts); err != nil {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
@@ -103,7 +105,7 @@ func (client Client) Descent(ctx context.Context, params DescentParams) error {
 
 	previous := revisions.CurrentResources()
 
-	if err := client.k8s.ApplyResources(ctx, next.Resources); err != nil {
+	if err := client.k8s.ApplyResources(ctx, next.Resources, k8s.ApplyResourcesOpts{SkipDryRun: true}); err != nil {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
