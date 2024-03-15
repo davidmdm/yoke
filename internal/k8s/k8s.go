@@ -109,16 +109,21 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 		return fmt.Errorf("failed to resolve resource: %w", err)
 	}
 
-	// _, err = resourceInterface.Create(ctx, resource, metav1.CreateOptions{
-	// 	TypeMeta:        metav1.TypeMeta{},
-	// 	DryRun:          []string{},
-	// 	FieldManager:    "",
-	// 	FieldValidation: "",
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("creating: %w", err)
-	// }
-	// return nil
+	dryRun := func() []string {
+		if opts.DryRun {
+			return []string{metav1.DryRunAll}
+		}
+		return nil
+	}()
+
+	createOpts := metav1.CreateOptions{
+		DryRun:       dryRun,
+		FieldManager: yoke,
+	}
+
+	if _, err := resourceInterface.Create(ctx, resource, createOpts); err == nil || !kerrors.IsAlreadyExists(err) {
+		return err
+	}
 
 	_, err = resourceInterface.Apply(
 		ctx,
@@ -126,12 +131,7 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 		resource,
 		metav1.ApplyOptions{
 			FieldManager: yoke,
-			DryRun: func() []string {
-				if opts.DryRun {
-					return []string{metav1.DryRunAll}
-				}
-				return nil
-			}(),
+			DryRun:       dryRun,
 		},
 	)
 	return err
