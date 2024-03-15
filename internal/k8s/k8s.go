@@ -7,12 +7,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -69,7 +69,8 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 }
 
 type ApplyResourcesOpts struct {
-	SkipDryRun bool
+	SkipDryRun     bool
+	ForceConflicts bool
 }
 
 func (client Client) ApplyResources(ctx context.Context, resources []*unstructured.Unstructured, opts ApplyResourcesOpts) error {
@@ -87,7 +88,7 @@ func (client Client) ApplyResources(ctx context.Context, resources []*unstructur
 	}
 
 	for _, resource := range resources {
-		if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: false}); err != nil {
+		if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: false, ForceConflicts: opts.ForceConflicts}); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", internal.Canonical(resource), err))
 		}
 	}
@@ -96,7 +97,8 @@ func (client Client) ApplyResources(ctx context.Context, resources []*unstructur
 }
 
 type ApplyOpts struct {
-	DryRun bool
+	DryRun         bool
+	ForceConflicts bool
 }
 
 func (client Client) ApplyResource(ctx context.Context, resource *unstructured.Unstructured, opts ApplyOpts) error {
@@ -124,6 +126,7 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 		data,
 		metav1.PatchOptions{
 			FieldManager: yoke,
+			Force:        &opts.ForceConflicts,
 			DryRun:       dryRun,
 		},
 	)

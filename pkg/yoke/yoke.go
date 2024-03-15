@@ -28,11 +28,12 @@ func FromK8Client(client *k8s.Client) *Client {
 }
 
 type TakeoffParams struct {
-	Release    string
-	Resources  []*unstructured.Unstructured
-	FlightID   string
-	Wasm       []byte
-	SkipDryRun bool
+	Release        string
+	Resources      []*unstructured.Unstructured
+	FlightID       string
+	Wasm           []byte
+	SkipDryRun     bool
+	ForceConflicts bool
 }
 
 func (client Client) Takeoff(ctx context.Context, params TakeoffParams) error {

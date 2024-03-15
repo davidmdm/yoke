@@ -32,11 +32,12 @@ type TakeoffFlightParams struct {
 
 type TakeoffParams struct {
 	GlobalSettings
-	SkipDryRun bool
-	Namespace  string
-	Release    string
-	Out        string
-	Flight     TakeoffFlightParams
+	SkipDryRun     bool
+	ForceConflicts bool
+	Namespace      string
+	Release        string
+	Out            string
+	Flight         TakeoffFlightParams
 }
 
 //go:embed cmd_takeoff_help.txt
@@ -61,8 +62,9 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
 
-	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
 	flagset.BoolVar(&params.SkipDryRun, "skip-dry-run", false, "disables running dry run to resources before applying them")
+	flagset.BoolVar(&params.ForceConflicts, "force-conflicts", false, "force apply changes on field manager conflicts")
+	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
 	flagset.StringVar(&params.Namespace, "namespace", "default", "preferred namespace for resources if they do not define one")
 
 	args, params.Flight.Args = internal.CutArgs(args)
@@ -120,11 +122,12 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 	}
 
 	return client.Takeoff(ctx, yoke.TakeoffParams{
-		Wasm:       wasm,
-		Resources:  resources,
-		Release:    params.Release,
-		SkipDryRun: params.SkipDryRun,
-		FlightID:   params.Flight.Path,
+		Release:        params.Release,
+		Resources:      resources,
+		FlightID:       params.Flight.Path,
+		Wasm:           wasm,
+		SkipDryRun:     params.SkipDryRun,
+		ForceConflicts: params.ForceConflicts,
 	})
 }
 
