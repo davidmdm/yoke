@@ -1,17 +1,37 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 
-	"github.com/davidmdm/yoke/cmd/examples/internal/flights/argocd"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
+// install.yaml downloaded from https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+//go:embed install.yaml
+var install string
+
 func main() {
-	resources, err := argocd.RenderChart(os.Args[0], "argocd", nil)
-	if err != nil {
-		panic(err)
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
+	var resources []*unstructured.Unstructured
+	for _, manifest := range strings.Split(install, "\n---\n") {
+		var resource unstructured.Unstructured
+		if err := yaml.Unmarshal([]byte(manifest), &resource); err != nil {
+			return err
+		}
+		resources = append(resources, &resource)
 	}
 
-	json.NewEncoder(os.Stdout).Encode(resources)
+	return json.NewEncoder(os.Stdout).Encode(resources)
 }
