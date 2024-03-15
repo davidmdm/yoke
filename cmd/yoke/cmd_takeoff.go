@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	y3 "gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
@@ -100,11 +101,11 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 	}
 
 	for _, resource := range resources {
-		apiResource, err := kube.LookupAPIResource(resource)
+		mapping, err := kube.LookupResourceMapping(resource)
 		if err != nil {
 			return err
 		}
-		if apiResource.Namespaced && resource.GetNamespace() == "" {
+		if mapping.Scope.Name() == meta.RESTScopeNameNamespace && resource.GetNamespace() == "" {
 			resource.SetNamespace(cmp.Or(params.Namespace, "default"))
 		}
 	}

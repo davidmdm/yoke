@@ -1,21 +1,23 @@
 package k8s
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/retry"
 
@@ -35,10 +37,9 @@ const (
 func releaseName(release string) string { return yoke + "-" + release }
 
 type Client struct {
-	dynamic            *dynamic.DynamicClient
-	clientset          *kubernetes.Clientset
-	preferredNamespace string
-	apiResourceCache   map[schema.GroupVersionKind]metav1.APIResource
+	dynamic   *dynamic.DynamicClient
+	clientset *kubernetes.Clientset
+	mapper    *restmapper.DeferredDiscoveryRESTMapper
 }
 
 func NewClientFromKubeConfig(path string) (*Client, error) {
@@ -63,13 +64,8 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 	return &Client{
 		dynamic:   dynamicClient,
 		clientset: clientset,
+		mapper:    restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(clientset.DiscoveryClient)),
 	}, nil
-}
-
-func (client *Client) WithPreferredNamespace(ns string) *Client {
-	c := *client
-	c.preferredNamespace = ns
-	return &c
 }
 
 type ApplyResourcesOpts struct {
@@ -116,20 +112,17 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 		return nil
 	}()
 
-	createOpts := metav1.CreateOptions{
-		DryRun:       dryRun,
-		FieldManager: yoke,
-	}
-
-	if _, err := resourceInterface.Create(ctx, resource, createOpts); err == nil || !kerrors.IsAlreadyExists(err) {
+	data, err := json.Marshal(resource)
+	if err != nil {
 		return err
 	}
 
-	_, err = resourceInterface.Apply(
+	_, err = resourceInterface.Patch(
 		ctx,
 		resource.GetName(),
-		resource,
-		metav1.ApplyOptions{
+		types.ApplyPatchType,
+		data,
+		metav1.PatchOptions{
 			FieldManager: yoke,
 			DryRun:       dryRun,
 		},
@@ -226,54 +219,19 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 }
 
 func (client Client) GetDynamicResourceInterface(resource *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
-	apiResource, err := client.LookupAPIResource(resource)
+	apiResource, err := client.LookupResourceMapping(resource)
 	if err != nil {
 		return nil, err
 	}
-
-	gvr := schema.GroupVersionResource{
-		Group:    apiResource.Group,
-		Version:  apiResource.Version,
-		Resource: apiResource.Name,
+	if apiResource.Scope.Name() == meta.RESTScopeNameNamespace {
+		return client.dynamic.Resource(apiResource.Resource).Namespace(resource.GetNamespace()), nil
 	}
-
-	if !apiResource.Namespaced {
-		return client.dynamic.Resource(gvr), nil
-	}
-
-	return client.dynamic.Resource(gvr).Namespace(resource.GetNamespace()), nil
+	return client.dynamic.Resource(apiResource.Resource), nil
 }
 
-func (client *Client) LookupAPIResource(resource *unstructured.Unstructured) (metav1.APIResource, error) {
+func (client *Client) LookupResourceMapping(resource *unstructured.Unstructured) (*meta.RESTMapping, error) {
 	gvk := schema.FromAPIVersionAndKind(resource.GetAPIVersion(), resource.GetKind())
-
-	if apiResource, ok := client.apiResourceCache[gvk]; ok {
-		return apiResource, nil
-	}
-
-	resources, err := client.clientset.DiscoveryClient.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
-	if err != nil {
-		return metav1.APIResource{}, fmt.Errorf("failed to discover resources for %s: %w", gvk.GroupVersion().String(), err)
-	}
-
-	apiResource, ok := internal.Find(resources.APIResources, func(item metav1.APIResource) bool {
-		return item.Kind == gvk.Kind && !strings.Contains(item.Name, "/")
-	})
-
-	if !ok {
-		return apiResource, fmt.Errorf("no api resource found for: %s", gvk)
-	}
-
-	if client.apiResourceCache == nil {
-		client.apiResourceCache = make(map[schema.GroupVersionKind]metav1.APIResource)
-	}
-
-	apiResource.Group = cmp.Or(apiResource.Group, gvk.Group)
-	apiResource.Version = cmp.Or(apiResource.Version, gvk.Version)
-
-	client.apiResourceCache[gvk] = apiResource
-
-	return apiResource, nil
+	return client.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 }
 
 func (client Client) UpdateResourceReleaseMapping(ctx context.Context, release string, create, remove []string) error {
