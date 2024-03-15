@@ -118,7 +118,7 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return err
 	}
 
-	revisions, ok := Find(allReleases, func(revisions internal.Revisions) bool {
+	revisions, ok := internal.Find(allReleases, func(revisions internal.Revisions) bool {
 		return revisions.Release == params.Release
 	})
 	if !ok {
@@ -141,7 +141,7 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return err
 	}
 
-	revision, ok := Find(revisions.History, func(revision internal.Revision) bool {
+	revision, ok := internal.Find(revisions.History, func(revision internal.Revision) bool {
 		return revision.ID == params.RevisionID
 	})
 	if !ok {
@@ -163,7 +163,7 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return nil
 	}
 
-	revision, ok = Find(revisions.History, func(revision internal.Revision) bool {
+	revision, ok = internal.Find(revisions.History, func(revision internal.Revision) bool {
 		return revision.ID == params.DiffRevisionID
 	})
 	if !ok {
@@ -205,16 +205,6 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 
 	_, err = fmt.Fprint(os.Stdout, diff)
 	return err
-}
-
-func Find[S ~[]E, E any](slice S, fn func(E) bool) (E, bool) {
-	switch idx := slices.IndexFunc(slice, fn); idx {
-	case -1:
-		var zero E
-		return zero, false
-	default:
-		return slice[idx], true
-	}
 }
 
 var (

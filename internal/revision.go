@@ -94,7 +94,7 @@ func Canonical(resource *unstructured.Unstructured) string {
 }
 
 func Namespace(resource *unstructured.Unstructured) string {
-	return cmp.Or(resource.GetNamespace(), "default")
+	return cmp.Or(resource.GetNamespace(), "_")
 }
 
 func CanonicalNameList(resources []*unstructured.Unstructured) []string {

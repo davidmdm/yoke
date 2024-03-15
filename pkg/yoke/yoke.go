@@ -23,6 +23,10 @@ func FromKubeConfig(path string) (*Client, error) {
 	return &Client{client}, nil
 }
 
+func FromK8Client(client *k8s.Client) *Client {
+	return &Client{client}
+}
+
 type TakeoffParams struct {
 	Release    string
 	Resources  []*unstructured.Unstructured

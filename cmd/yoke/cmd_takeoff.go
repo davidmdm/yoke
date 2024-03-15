@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	_ "embed"
 	"flag"
@@ -17,6 +18,7 @@ import (
 	"github.com/davidmdm/x/xerr"
 
 	"github.com/davidmdm/yoke/internal"
+	"github.com/davidmdm/yoke/internal/k8s"
 	"github.com/davidmdm/yoke/internal/wasi"
 	"github.com/davidmdm/yoke/pkg/yoke"
 )
@@ -57,6 +59,7 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 	}
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
+
 	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
 	flagset.BoolVar(&params.SkipDryRun, "skip-dry-run", false, "disables running dry run to resources before applying them")
 	flagset.StringVar(&params.Namespace, "namespace", "default", "preferred namespace for resources if they do not define one")
@@ -84,14 +87,25 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to evaluate flight: %w", err)
 	}
 
+	kube, err := k8s.NewClientFromKubeConfig(params.KubeConfigPath)
+	if err != nil {
+		return err
+	}
+
+	client := yoke.FromK8Client(kube)
+
 	var resources internal.List[*unstructured.Unstructured]
 	if err := yaml.Unmarshal(output, &resources); err != nil {
 		return fmt.Errorf("failed to unmarshal raw resources: %w", err)
 	}
 
 	for _, resource := range resources {
-		if resource.GetNamespace() == "" {
-			resource.SetNamespace(params.Namespace)
+		apiResource, err := kube.LookupAPIResource(resource)
+		if err != nil {
+			return err
+		}
+		if apiResource.Namespaced && resource.GetNamespace() == "" {
+			resource.SetNamespace(cmp.Or(params.Namespace, "default"))
 		}
 	}
 
@@ -102,11 +116,6 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 			return ExportToStdout(resources)
 		}
 		return ExportToFS(params.Out, params.Release, resources)
-	}
-
-	client, err := yoke.FromKubeConfig(params.KubeConfigPath)
-	if err != nil {
-		return err
 	}
 
 	return client.Takeoff(ctx, yoke.TakeoffParams{
@@ -132,6 +141,7 @@ func ExportToFS(dir, release string, resources []*unstructured.Unstructured) err
 	var errs []error
 	for _, resource := range resources {
 		path := filepath.Join(root, internal.Canonical(resource)+".yaml")
+
 		if err := internal.WriteYAML(path, resource.Object); err != nil {
 			errs = append(errs, err)
 		}

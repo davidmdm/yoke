@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -34,8 +35,10 @@ const (
 func releaseName(release string) string { return yoke + "-" + release }
 
 type Client struct {
-	dynamic   *dynamic.DynamicClient
-	clientset *kubernetes.Clientset
+	dynamic            *dynamic.DynamicClient
+	clientset          *kubernetes.Clientset
+	preferredNamespace string
+	apiResourceCache   map[schema.GroupVersionKind]metav1.APIResource
 }
 
 func NewClientFromKubeConfig(path string) (*Client, error) {
@@ -61,6 +64,12 @@ func NewClient(cfg *rest.Config) (*Client, error) {
 		dynamic:   dynamicClient,
 		clientset: clientset,
 	}, nil
+}
+
+func (client *Client) WithPreferredNamespace(ns string) *Client {
+	c := *client
+	c.preferredNamespace = ns
+	return &c
 }
 
 type ApplyResourcesOpts struct {
@@ -95,10 +104,21 @@ type ApplyOpts struct {
 }
 
 func (client Client) ApplyResource(ctx context.Context, resource *unstructured.Unstructured, opts ApplyOpts) error {
-	resourceInterface, err := client.getDynamicResourceInterface(resource)
+	resourceInterface, err := client.GetDynamicResourceInterface(resource)
 	if err != nil {
 		return fmt.Errorf("failed to resolve resource: %w", err)
 	}
+
+	// _, err = resourceInterface.Create(ctx, resource, metav1.CreateOptions{
+	// 	TypeMeta:        metav1.TypeMeta{},
+	// 	DryRun:          []string{},
+	// 	FieldManager:    "",
+	// 	FieldValidation: "",
+	// })
+	// if err != nil {
+	// 	return fmt.Errorf("creating: %w", err)
+	// }
+	// return nil
 
 	_, err = resourceInterface.Apply(
 		ctx,
@@ -130,7 +150,7 @@ func (client Client) RemoveOrphans(ctx context.Context, previous, current []*uns
 			continue
 		}
 
-		resourceInterface, err := client.getDynamicResourceInterface(resource)
+		resourceInterface, err := client.GetDynamicResourceInterface(resource)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to resolve resource %s: %w", internal.Canonical(resource), err))
 			continue
@@ -205,32 +225,55 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 	return err
 }
 
-func (client Client) getDynamicResourceInterface(resource *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
+func (client Client) GetDynamicResourceInterface(resource *unstructured.Unstructured) (dynamic.ResourceInterface, error) {
+	apiResource, err := client.LookupAPIResource(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	gvr := schema.GroupVersionResource{
+		Group:    apiResource.Group,
+		Version:  apiResource.Version,
+		Resource: apiResource.Name,
+	}
+
+	if !apiResource.Namespaced {
+		return client.dynamic.Resource(gvr), nil
+	}
+
+	return client.dynamic.Resource(gvr).Namespace(resource.GetNamespace()), nil
+}
+
+func (client *Client) LookupAPIResource(resource *unstructured.Unstructured) (metav1.APIResource, error) {
 	gvk := schema.FromAPIVersionAndKind(resource.GetAPIVersion(), resource.GetKind())
+
+	if apiResource, ok := client.apiResourceCache[gvk]; ok {
+		return apiResource, nil
+	}
 
 	resources, err := client.clientset.DiscoveryClient.ServerResourcesForGroupVersion(gvk.GroupVersion().String())
 	if err != nil {
-		return nil, fmt.Errorf("failed to discover resources for %s: %w", gvk.GroupVersion().String(), err)
+		return metav1.APIResource{}, fmt.Errorf("failed to discover resources for %s: %w", gvk.GroupVersion().String(), err)
 	}
 
-	resourceName := func() string {
-		for _, api := range resources.APIResources {
-			if api.Kind == gvk.Kind && !strings.Contains(api.Name, "/") {
-				return api.Name
-			}
-		}
-		return ""
-	}()
+	apiResource, ok := internal.Find(resources.APIResources, func(item metav1.APIResource) bool {
+		return item.Kind == gvk.Kind && !strings.Contains(item.Name, "/")
+	})
 
-	gvr := schema.GroupVersionResource{
-		Group:    gvk.Group,
-		Version:  gvk.Version,
-		Resource: resourceName,
+	if !ok {
+		return apiResource, fmt.Errorf("no api resource found for: %s", gvk)
 	}
 
-	namespace := internal.Namespace(resource)
+	if client.apiResourceCache == nil {
+		client.apiResourceCache = make(map[schema.GroupVersionKind]metav1.APIResource)
+	}
 
-	return client.dynamic.Resource(gvr).Namespace(namespace), nil
+	apiResource.Group = cmp.Or(apiResource.Group, gvk.Group)
+	apiResource.Version = cmp.Or(apiResource.Version, gvk.Version)
+
+	client.apiResourceCache[gvk] = apiResource
+
+	return apiResource, nil
 }
 
 func (client Client) UpdateResourceReleaseMapping(ctx context.Context, release string, create, remove []string) error {
@@ -337,4 +380,9 @@ func (client Client) DeleteRevisions(ctx context.Context, release string) error 
 	return client.clientset.CoreV1().
 		ConfigMaps(NSKubeSystem).
 		Delete(ctx, releaseName(release), metav1.DeleteOptions{})
+}
+
+func IsNamespaced(resource dynamic.ResourceInterface) bool {
+	_, ok := resource.(interface{ Namespace(string) bool })
+	return ok
 }
