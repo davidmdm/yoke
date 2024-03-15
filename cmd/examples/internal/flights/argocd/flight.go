@@ -1,4 +1,4 @@
-package {{ .Package }}
+package argocd
 
 import (
 	_ "embed"
@@ -8,12 +8,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-//go:embed {{ .Archive }}
+//go:embed argo-cd-6.7.2.tgz
 var archive []byte
 
-// RenderChart renders the chart downloaded from {{.URL}}
-// Producing version: {{ .Version }}
-func RenderChart(release, namespace string, values {{if .UseFallback}}map[string]any{{else}}*Values{{end}}) ([]*unstructured.Unstructured, error) {
+// RenderChart renders the chart downloaded from https://argoproj.github.io/argo-helm/argo-cd
+// Producing version: 6.7.2
+func RenderChart(release, namespace string, values map[string]any) ([]*unstructured.Unstructured, error) {
 	chart, err := helm.LoadChartFromZippedArchive(archive)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load chart from zipped archive: %w", err)

@@ -5,8 +5,10 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -77,9 +79,9 @@ func run() error {
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create outdir: %w", err)
 	}
+	packageName := filepath.Base(*outDir)
 
-	cmd := exec.CommandContext(ctx, "helm", "pull", *repo)
-	if err := x(cmd, WithDir(*outDir)); err != nil {
+	if err := pullHelmRepo(ctx, *repo, *outDir); err != nil {
 		return fmt.Errorf("failed to pull helm repo: %w", err)
 	}
 
@@ -131,17 +133,19 @@ func run() error {
 			return fmt.Errorf("failed to generate jsonschema: %w", err)
 		}
 
+		genGoTypes := exec.CommandContext(ctx, "go-jsonschema", schemaFile, "-o", filepath.Join(*outDir, "values.go"), "-p", packageName, "--only-models")
+		if err := x(genGoTypes); err != nil {
+			return fmt.Errorf("failed to gen go types: %w", err)
+		}
+
 		return nil
 	}()
+
+	var useFallback bool
 	if err != nil {
-		return fmt.Errorf("failed create schema: %w", err)
-	}
-
-	packageName := filepath.Base(*outDir)
-
-	genGoTypes := exec.CommandContext(ctx, "go-jsonschema", schemaFile, "-o", filepath.Join(*outDir, "values.go"), "-p", packageName, "--only-models")
-	if err := x(genGoTypes); err != nil {
-		return fmt.Errorf("failed to gen go types: %w", err)
+		debug("failed generate types from schema: %v", err)
+		debug("fallbacking to map[string]any :'(")
+		useFallback = true
 	}
 
 	flight, err := os.Create(filepath.Join(*outDir, "flight.go"))
@@ -151,11 +155,17 @@ func run() error {
 	defer flight.Close()
 
 	return flightTemplate.Execute(flight, struct {
-		Archive string
-		Package string
+		Archive     string
+		Package     string
+		URL         string
+		Version     string
+		UseFallback bool
 	}{
-		Archive: filepath.Base(archive),
-		Package: packageName,
+		URL:         *repo,
+		Version:     getVersion(filepath.Base(archive)),
+		Archive:     filepath.Base(archive),
+		Package:     packageName,
+		UseFallback: useFallback,
 	})
 }
 
@@ -190,6 +200,29 @@ func ensureGoJsonSchema(ctx context.Context) error {
 	return nil
 }
 
+func pullHelmRepo(ctx context.Context, repo, out string) error {
+	uri, err := url.Parse(repo)
+	if err != nil {
+		return err
+	}
+	if uri.Scheme == "" {
+		uri.Scheme = "oci"
+	}
+
+	cmd := func() *exec.Cmd {
+		switch uri.Scheme {
+		case "http", "https":
+			repo, chart := path.Split(uri.Path)
+			uri.Path = repo
+			return exec.CommandContext(ctx, "helm", "pull", "--repo", uri.String(), chart)
+		default:
+			return exec.CommandContext(ctx, "helm", "pull", uri.String())
+		}
+	}()
+
+	return x(cmd, WithDir(out))
+}
+
 var cyan = ansi.MakeStyle(ansi.FgCyan).Sprint
 
 func x(cmd *exec.Cmd, opts ...XOpt) error {
@@ -213,4 +246,9 @@ func WithDir(dir string) XOpt {
 	return func(c *exec.Cmd) {
 		c.Dir = dir
 	}
+}
+
+func getVersion(archive string) string {
+	archive = archive[:len(archive)-len(filepath.Ext(archive))]
+	return archive[strings.LastIndex(archive, "-")+1:]
 }
