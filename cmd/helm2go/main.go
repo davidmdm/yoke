@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"text/template"
@@ -53,6 +54,7 @@ func main() {
 func run() error {
 	repo := flag.String("repo", "", "bitnami repo to turn into a flight function")
 	useSchema := flag.Bool("schema", false, "prefer schema over parsing values file")
+	version := flag.String("version", "", "version of chart to download")
 	outDir := flag.String("outdir", "", "outdir for the flight package")
 
 	flag.Parse()
@@ -75,13 +77,18 @@ func run() error {
 		return fmt.Errorf("failed to ensure go-jsonschema installation: %w", err)
 	}
 
+	packageName := regexp.MustCompile(`\W`).ReplaceAllString(filepath.Base(*outDir), "")
 	*outDir, _ = filepath.Abs(*outDir)
+
+	if *version != "" {
+		*outDir = filepath.Join(*outDir, *version)
+	}
+
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create outdir: %w", err)
 	}
-	packageName := filepath.Base(*outDir)
 
-	if err := pullHelmRepo(ctx, *repo, *outDir); err != nil {
+	if err := pullHelmRepo(ctx, *repo, *version, *outDir); err != nil {
 		return fmt.Errorf("failed to pull helm repo: %w", err)
 	}
 
@@ -200,7 +207,7 @@ func ensureGoJsonSchema(ctx context.Context) error {
 	return nil
 }
 
-func pullHelmRepo(ctx context.Context, repo, out string) error {
+func pullHelmRepo(ctx context.Context, repo, version, out string) error {
 	uri, err := url.Parse(repo)
 	if err != nil {
 		return err
@@ -219,6 +226,10 @@ func pullHelmRepo(ctx context.Context, repo, out string) error {
 			return exec.CommandContext(ctx, "helm", "pull", uri.String())
 		}
 	}()
+
+	if version != "" {
+		cmd.Args = append(cmd.Args, "--version", version)
+	}
 
 	return x(cmd, WithDir(out))
 }
