@@ -4,8 +4,9 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/davidmdm/yoke/pkg/helm"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/davidmdm/yoke/pkg/helm"
 )
 
 //go:embed argo-cd-6.6.0.tgz

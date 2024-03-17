@@ -4,6 +4,7 @@ go 1.22
 
 require (
 	github.com/davidmdm/ansi v0.0.6
+	github.com/davidmdm/conf v0.0.4
 	github.com/davidmdm/x/xcontext v0.0.2
 	github.com/davidmdm/x/xerr v0.0.3
 	github.com/jedib0t/go-pretty/v6 v6.5.4

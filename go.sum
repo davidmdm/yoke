@@ -14,6 +14,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davidmdm/ansi v0.0.6 h1:syP/vheqacPk4lI4c+Z01IKHbOax4FpcLu5sYXMIHUg=
 github.com/davidmdm/ansi v0.0.6/go.mod h1:En92c514AKUGa+HLY43mQfVImaVtBtAr5fako6mQa6w=
+github.com/davidmdm/conf v0.0.4 h1:RluYzOw+d/H112lY2OCHWPIQemtOGhidLk0wi3QWqms=
+github.com/davidmdm/conf v0.0.4/go.mod h1:xcNNsALh9qR2toeuYnXfyMuOPMVuEAfWN0Nb4lqugzw=
 github.com/davidmdm/x/xcontext v0.0.2 h1:4m1WTHNuuquQztl8YCpR3bxsCipPilGtVjJkTgXPLY0=
 github.com/davidmdm/x/xcontext v0.0.2/go.mod h1:ER3jrDtsl/eNmxrGpbO0/7Ep+0waYnohBR1vKznub1U=
 github.com/davidmdm/x/xerr v0.0.3 h1:WwHvo6qzR+eRmHq69Ftgb7PL9832iwy313XpQyJRGtM=
