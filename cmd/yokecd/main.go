@@ -46,8 +46,10 @@ func getConfig() (cfg Config) {
 }
 
 func run(cfg Config) error {
+	enc := json.NewEncoder(os.Stdout)
+
 	if cfg.Flight == "" {
-		return HandleAppSource(cfg.Argo)
+		return HandleAppSource(enc, cfg.Argo)
 	}
 
 	var flight Flight
@@ -65,8 +67,6 @@ func run(cfg Config) error {
 	if err != nil {
 		return err
 	}
-
-	enc := json.NewEncoder(os.Stdout)
 
 	resources, err := wasi.Execute(
 		context.Background(),
@@ -88,13 +88,11 @@ func run(cfg Config) error {
 	return nil
 }
 
-func HandleAppSource(argo ArgoConfig) error {
+func HandleAppSource(enc *json.Encoder, argo ArgoConfig) error {
 	manifests, err := findManifests(argo.Path)
 	if err != nil {
 		return fmt.Errorf("failed to find manifests: %w", err)
 	}
-
-	enc := json.NewEncoder(os.Stdout)
 
 	for _, manifest := range manifests {
 		if err := OutputManfiest(enc, argo, manifest); err != nil {
