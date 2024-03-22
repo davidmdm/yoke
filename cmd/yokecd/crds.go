@@ -1,10 +1,10 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"path/filepath"
 
-	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -28,7 +28,8 @@ type Metadata struct {
 }
 
 type FlightSpec struct {
-	WasmURL string   `json:"wasmUrl"`
+	ApplicationSpec
+	WasmURL string   `json:"wasmURL"`
 	Args    []string `json:"args,omitempty"`
 	Input   string   `json:"input,omitempty"`
 }
@@ -53,7 +54,7 @@ type SourcePlugin struct {
 }
 
 type ApplicationSpec struct {
-	Source      ApplicationSource `json:"source"`
+	Source      ApplicationSource `json:"source,omitempty"`
 	Project     string            `json:"project"`
 	Destination struct {
 		Name      string `json:"name"`
@@ -64,33 +65,30 @@ type ApplicationSpec struct {
 type App Resource[ApplicationSpec]
 
 func (flight Flight) AsArgoApplication(manifest string, argo ArgoConfig) App {
-	data, _ := yaml.Marshal(flight)
+	data, _ := json.MarshalIndent(flight, "", "  ")
+
+	appSpec := flight.Spec.ApplicationSpec
+
+	manifestDir, _ := filepath.Split(manifest)
+
+	appSpec.Source.Path = filepath.Join(argo.Path, manifestDir)
+	appSpec.Source.RepoURL = argo.RepoURL
+	appSpec.Source.TargetRevision = argo.Revision
+
+	appSpec.Destination.Namespace = cmp.Or(appSpec.Destination.Namespace, argo.Namespace)
+
+	appSpec.Source.Plugin.Name = cmp.Or(appSpec.Source.Plugin.Name, argo.PluginName)
+
+	appSpec.Source.Plugin.Env = append(appSpec.Source.Plugin.Env, PluginEnv{
+		Name:  "FLIGHT",
+		Value: string(data),
+	})
 
 	return App{
 		APIVersion: "argoproj.io/v1alpha1",
 		Kind:       "Application",
 		Metadata:   flight.Metadata,
-		Spec: ApplicationSpec{
-			Source: ApplicationSource{
-				RepoURL:        argo.RepoURL,
-				Path:           filepath.Join(argo.Path, manifest),
-				TargetRevision: argo.Revision,
-				Plugin: SourcePlugin{
-					Name: argo.PluginName,
-					Env: []PluginEnv{
-						{Name: "flight", Value: string(data)},
-					},
-				},
-			},
-			Destination: struct {
-				Name      string "json:\"name\""
-				Namespace string "json:\"namespace\""
-			}{
-				Name:      "in-cluster",
-				Namespace: argo.Namespace,
-			},
-			Project: "todo",
-		},
+		Spec:       appSpec,
 	}
 }
 
