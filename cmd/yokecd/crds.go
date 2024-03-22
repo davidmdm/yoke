@@ -27,15 +27,6 @@ type Metadata struct {
 	Namespace   string         `json:"namespace,omitempty"`
 }
 
-type FlightSpec struct {
-	ApplicationSpec
-	WasmURL string   `json:"wasmURL"`
-	Args    []string `json:"args,omitempty"`
-	Input   string   `json:"input,omitempty"`
-}
-
-type Flight Resource[FlightSpec]
-
 type ApplicationSource struct {
 	RepoURL        string       `json:"repoURL"`
 	Path           string       `json:"path"`
@@ -62,9 +53,18 @@ type ApplicationSpec struct {
 	} `json:"destination"`
 }
 
-type App Resource[ApplicationSpec]
+type Application Resource[ApplicationSpec]
 
-func (flight Flight) AsArgoApplication(manifest string, argo ArgoConfig) App {
+type FlightSpec struct {
+	ApplicationSpec
+	WasmURL string   `yaml:"wasmURL,omitempty" json:"wasmURL"`
+	Args    []string `yaml:"args,omitempty" json:"args,omitempty"`
+	Input   string   `yaml:"input,omitempty" json:"input,omitempty"`
+}
+
+type Flight Resource[FlightSpec]
+
+func (flight Flight) AsArgoApplication(manifest string, argo ArgoConfig) Application {
 	data, _ := json.MarshalIndent(flight, "", "  ")
 
 	appSpec := flight.Spec.ApplicationSpec
@@ -84,7 +84,7 @@ func (flight Flight) AsArgoApplication(manifest string, argo ArgoConfig) App {
 		Value: string(data),
 	})
 
-	return App{
+	return Application{
 		APIVersion: "argoproj.io/v1alpha1",
 		Kind:       "Application",
 		Metadata:   flight.Metadata,

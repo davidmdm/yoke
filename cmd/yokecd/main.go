@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/davidmdm/conf"
+	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/yoke/internal/wasi"
 )
 
@@ -68,6 +69,8 @@ func run(cfg Config) error {
 		return fmt.Errorf("failed to parse flight: %w", err)
 	}
 
+	debug("flight: %+v\n", flight)
+
 	resp, err := http.Get(flight.Spec.WasmURL)
 	if err != nil {
 		return err
@@ -79,7 +82,9 @@ func run(cfg Config) error {
 		return err
 	}
 
-	resources, err := wasi.Execute(
+	debug("downloaded wasm")
+
+	data, err := wasi.Execute(
 		context.Background(),
 		wasm,
 		flight.Metadata.Name,
@@ -88,6 +93,13 @@ func run(cfg Config) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to execute flight wasm: %w", err)
+	}
+
+	debug("wasm executed without error")
+
+	var resources internal.List[*unstructured.Unstructured]
+	if err := yaml.Unmarshal(data, &resources); err != nil {
+		return fmt.Errorf("failed to unmarshal executed flight data: %w", err)
 	}
 
 	for _, resource := range resources {
