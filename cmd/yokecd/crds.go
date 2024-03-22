@@ -70,7 +70,7 @@ func (flight Flight) AsArgoApplication(argo ArgoConfig) App {
 				Path:           argo.Path,
 				TargetRevision: argo.Revision,
 				Plugin: SourcePlugin{
-					Name: "",
+					Name: argo.PluginName,
 					Env: []PluginEnv{
 						{Name: "flight", Value: string(data)},
 					},

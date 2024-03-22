@@ -26,9 +26,10 @@ func main() {
 }
 
 type ArgoConfig struct {
-	Path     string
-	RepoURL  string
-	Revision string
+	Path       string
+	RepoURL    string
+	Revision   string
+	PluginName string
 }
 
 type Config struct {
@@ -40,17 +41,25 @@ func getConfig() (cfg Config) {
 	conf.Var(conf.Environ, &cfg.Argo.Path, "ARGOCD_APP_SOURCE_PATH", conf.Default("."))
 	conf.Var(conf.Environ, &cfg.Argo.RepoURL, "ARGGOCD_APP_SOURCE_REPO_URL")
 	conf.Var(conf.Environ, &cfg.Argo.Revision, "ARGGOCD_APP_SOURCE_REVISION", conf.Default("main"))
+	conf.Var(conf.Environ, &cfg.Argo.PluginName, "ARGOCD_ENV_PLUGIN_NAME")
 	conf.Var(conf.Environ, &cfg.Flight, "ARGOCD_ENV_FLIGHT")
 	conf.Environ.MustParse()
 	return
+}
+
+func debug(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 func run(cfg Config) error {
 	enc := json.NewEncoder(os.Stdout)
 
 	if cfg.Flight == "" {
+		debug("application is not a flight")
 		return HandleAppSource(enc, cfg.Argo)
 	}
+
+	debug("application is a flight")
 
 	var flight Flight
 	if err := yaml.Unmarshal([]byte(cfg.Flight), &flight); err != nil {
@@ -95,6 +104,7 @@ func HandleAppSource(enc *json.Encoder, argo ArgoConfig) error {
 	}
 
 	for _, manifest := range manifests {
+		debug("handling manifest: %s", manifest)
 		if err := OutputManfiest(enc, argo, manifest); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to output manifest %s: %v\n\n", manifest, err)
 		}
@@ -113,6 +123,8 @@ func OutputManfiest(enc *json.Encoder, argo ArgoConfig, manifest string) error {
 	if err := yaml.Unmarshal(data, &resource); err != nil {
 		return fmt.Errorf("cannot unmarshall into unstructured resource: %w", err)
 	}
+
+	debug("%s: %s", manifest, resource.GetKind())
 
 	flight, err := AsFlight(resource)
 	if err != nil {
