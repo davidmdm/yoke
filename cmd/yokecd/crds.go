@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -15,21 +16,21 @@ const (
 type Resource[T any] struct {
 	APIVersion string   `json:"apiVersion"`
 	Kind       string   `json:"kind"`
-	Metadata   Metadata `json:"metadata"`
+	Metadata   Metadata `json:"metadata,omitempty"`
 	Spec       T        `json:"spec"`
 }
 
 type Metadata struct {
-	Labels      map[string]any `json:"labels"`
-	Annotations map[string]any `json:"annotations"`
+	Labels      map[string]any `json:"labels,omitempty"`
+	Annotations map[string]any `json:"annotations,omitempty"`
 	Name        string         `json:"name"`
-	Namespace   string         `json:"namespace"`
+	Namespace   string         `json:"namespace,omitempty"`
 }
 
 type FlightSpec struct {
 	WasmURL string   `json:"wasmUrl"`
-	Args    []string `json:"args"`
-	Input   string   `json:"input"`
+	Args    []string `json:"args,omitempty"`
+	Input   string   `json:"input,omitempty"`
 }
 
 type Flight Resource[FlightSpec]
@@ -52,12 +53,17 @@ type SourcePlugin struct {
 }
 
 type ApplicationSpec struct {
-	Source ApplicationSource `json:"source"`
+	Source      ApplicationSource `json:"source"`
+	Project     string            `json:"project"`
+	Destination struct {
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"destination"`
 }
 
 type App Resource[ApplicationSpec]
 
-func (flight Flight) AsArgoApplication(argo ArgoConfig) App {
+func (flight Flight) AsArgoApplication(manifest string, argo ArgoConfig) App {
 	data, _ := yaml.Marshal(flight)
 
 	return App{
@@ -67,7 +73,7 @@ func (flight Flight) AsArgoApplication(argo ArgoConfig) App {
 		Spec: ApplicationSpec{
 			Source: ApplicationSource{
 				RepoURL:        argo.RepoURL,
-				Path:           argo.Path,
+				Path:           filepath.Join(argo.Path, manifest),
 				TargetRevision: argo.Revision,
 				Plugin: SourcePlugin{
 					Name: argo.PluginName,
@@ -76,6 +82,14 @@ func (flight Flight) AsArgoApplication(argo ArgoConfig) App {
 					},
 				},
 			},
+			Destination: struct {
+				Name      string "json:\"name\""
+				Namespace string "json:\"namespace\""
+			}{
+				Name:      "in-cluster",
+				Namespace: argo.Namespace,
+			},
+			Project: "todo",
 		},
 	}
 }

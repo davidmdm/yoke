@@ -27,6 +27,7 @@ func main() {
 
 type ArgoConfig struct {
 	Path       string
+	Namespace  string
 	RepoURL    string
 	Revision   string
 	PluginName string
@@ -39,8 +40,9 @@ type Config struct {
 
 func getConfig() (cfg Config) {
 	conf.Var(conf.Environ, &cfg.Argo.Path, "ARGOCD_APP_SOURCE_PATH", conf.Default("."))
-	conf.Var(conf.Environ, &cfg.Argo.RepoURL, "ARGGOCD_APP_SOURCE_REPO_URL")
-	conf.Var(conf.Environ, &cfg.Argo.Revision, "ARGGOCD_APP_SOURCE_REVISION", conf.Default("main"))
+	conf.Var(conf.Environ, &cfg.Argo.RepoURL, "ARGOCD_APP_SOURCE_REPO_URL")
+	conf.Var(conf.Environ, &cfg.Argo.Revision, "ARGOCD_APP_SOURCE_TARGET_REVISION", conf.Default("main"))
+	conf.Var(conf.Environ, &cfg.Argo.Namespace, "ARGOCD_APP_NAMESPACE")
 	conf.Var(conf.Environ, &cfg.Argo.PluginName, "ARGOCD_ENV_PLUGIN_NAME")
 	conf.Var(conf.Environ, &cfg.Flight, "ARGOCD_ENV_FLIGHT")
 	conf.Environ.MustParse()
@@ -98,7 +100,7 @@ func run(cfg Config) error {
 }
 
 func HandleAppSource(enc *json.Encoder, argo ArgoConfig) error {
-	manifests, err := findManifests(argo.Path)
+	manifests, err := findManifests(".")
 	if err != nil {
 		return fmt.Errorf("failed to find manifests: %w", err)
 	}
@@ -138,7 +140,7 @@ func OutputManfiest(enc *json.Encoder, argo ArgoConfig, manifest string) error {
 		return nil
 	}
 
-	if err := enc.Encode(flight.AsArgoApplication(argo)); err != nil {
+	if err := enc.Encode(flight.AsArgoApplication(manifest, argo)); err != nil {
 		return fmt.Errorf("failed to encode as json: %w", err)
 	}
 	return nil
