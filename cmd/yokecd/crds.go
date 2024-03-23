@@ -39,9 +39,14 @@ type PluginEnv struct {
 	Value string `json:"value"`
 }
 
+type PluginParameter struct {
+	Name   string `json:"name"`
+	String string `json:"string,omitempty"`
+}
 type SourcePlugin struct {
-	Name string      `json:"name"`
-	Env  []PluginEnv `json:"env"`
+	Name       string            `json:"name"`
+	Env        []PluginEnv       `json:"env,omitempty"`
+	Parameters []PluginParameter `json:"parameters,omitempty"`
 }
 
 type ApplicationSpec struct {
@@ -56,10 +61,10 @@ type ApplicationSpec struct {
 type Application Resource[ApplicationSpec]
 
 type FlightSpec struct {
-	ApplicationSpec
-	WasmURL string   `yaml:"wasmURL,omitempty" json:"wasmURL"`
-	Args    []string `yaml:"args,omitempty" json:"args,omitempty"`
-	Input   string   `yaml:"input,omitempty" json:"input,omitempty"`
+	ApplicationSpec `json:",omitempty"`
+	WasmURL         string   `yaml:"wasmURL,omitempty" json:"wasmURL"`
+	Args            []string `yaml:"args,omitempty" json:"args,omitempty"`
+	Input           string   `yaml:"input,omitempty" json:"input,omitempty"`
 }
 
 type Flight Resource[FlightSpec]
@@ -82,6 +87,11 @@ func (flight Flight) AsArgoApplication(manifest string, argo ArgoConfig) Applica
 	appSpec.Source.Plugin.Env = append(appSpec.Source.Plugin.Env, PluginEnv{
 		Name:  "FLIGHT",
 		Value: string(data),
+	})
+
+	appSpec.Source.Plugin.Parameters = append(appSpec.Source.Plugin.Parameters, PluginParameter{
+		Name:   "manifest-file",
+		String: filepath.Join(argo.Path, manifest),
 	})
 
 	return Application{

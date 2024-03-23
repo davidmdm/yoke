@@ -71,6 +71,8 @@ func run(cfg Config) error {
 
 	debug("flight: %+v\n", flight)
 
+	debug("downloading wasm: %s", flight.Spec.WasmURL)
+
 	resp, err := http.Get(flight.Spec.WasmURL)
 	if err != nil {
 		return err
@@ -82,7 +84,7 @@ func run(cfg Config) error {
 		return err
 	}
 
-	debug("downloaded wasm")
+	debug("executing wasm")
 
 	data, err := wasi.Execute(
 		context.Background(),
@@ -103,10 +105,13 @@ func run(cfg Config) error {
 	}
 
 	for _, resource := range resources {
+		debug("encoding: %s", resource.GetName())
 		if err := enc.Encode(resource); err != nil {
 			return err
 		}
 	}
+
+	debug("resources outputted %d", len(resources))
 
 	return nil
 }
