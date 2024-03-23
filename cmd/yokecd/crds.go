@@ -50,10 +50,13 @@ type SourcePlugin struct {
 }
 
 type (
-	ApplicationSyncPolicy struct {
+	SyncPolicyAutomated struct {
 		Prune      bool `json:"prune,omitempty"`
 		SelfHeal   bool `json:"selfHeal,omitempty"`
 		AllowEmpty bool `json:"allowEmpty,omitempty"`
+	}
+	ApplicationSyncPolicy struct {
+		Automated *SyncPolicyAutomated `json:"automated,omitempty"`
 	}
 	ApplicationSpec struct {
 		Source      ApplicationSource `json:"source,omitempty"`
@@ -62,7 +65,7 @@ type (
 			Name      string `json:"name"`
 			Namespace string `json:"namespace"`
 		} `json:"destination"`
-		SyncPolicy *ApplicationSyncPolicy `json:"syncPolicy,omitempty"`
+		SyncPolicy ApplicationSyncPolicy `json:"syncPolicy,omitempty"`
 	}
 )
 
