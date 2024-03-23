@@ -59,8 +59,8 @@ type (
 		Automated *SyncPolicyAutomated `json:"automated,omitempty"`
 	}
 	ApplicationSpec struct {
-		Source      ApplicationSource `json:"source,omitempty"`
-		Project     string            `json:"project"`
+		Source      *ApplicationSource `json:"source,omitempty"`
+		Project     string             `json:"project"`
 		Destination struct {
 			Name      string `json:"name"`
 			Namespace string `json:"namespace"`
@@ -87,19 +87,21 @@ func (flight Flight) AsArgoApplication(manifest string, argo ArgoConfig) Applica
 
 	manifestDir, _ := filepath.Split(manifest)
 
+	appSpec.Destination.Namespace = cmp.Or(appSpec.Destination.Namespace, argo.Namespace)
+
+	if appSpec.Source == nil {
+		appSpec.Source = new(ApplicationSource)
+	}
+
 	appSpec.Source.Path = filepath.Join(argo.Path, manifestDir)
 	appSpec.Source.RepoURL = argo.RepoURL
 	appSpec.Source.TargetRevision = argo.Revision
 
-	appSpec.Destination.Namespace = cmp.Or(appSpec.Destination.Namespace, argo.Namespace)
-
 	appSpec.Source.Plugin.Name = cmp.Or(appSpec.Source.Plugin.Name, argo.PluginName)
-
 	appSpec.Source.Plugin.Env = append(appSpec.Source.Plugin.Env, PluginEnv{
 		Name:  "FLIGHT",
 		Value: string(data),
 	})
-
 	appSpec.Source.Plugin.Parameters = append(appSpec.Source.Plugin.Parameters, PluginParameter{
 		Name:   "manifest-file",
 		String: filepath.Join(argo.Path, manifest),
