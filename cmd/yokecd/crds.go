@@ -49,14 +49,22 @@ type SourcePlugin struct {
 	Parameters []PluginParameter `json:"parameters,omitempty"`
 }
 
-type ApplicationSpec struct {
-	Source      ApplicationSource `json:"source,omitempty"`
-	Project     string            `json:"project"`
-	Destination struct {
-		Name      string `json:"name"`
-		Namespace string `json:"namespace"`
-	} `json:"destination"`
-}
+type (
+	ApplicationSyncPolicy struct {
+		Prune      bool `json:"prune,omitempty"`
+		SelfHeal   bool `json:"selfHeal,omitempty"`
+		AllowEmpty bool `json:"allowEmpty,omitempty"`
+	}
+	ApplicationSpec struct {
+		Source      ApplicationSource `json:"source,omitempty"`
+		Project     string            `json:"project"`
+		Destination struct {
+			Name      string `json:"name"`
+			Namespace string `json:"namespace"`
+		} `json:"destination"`
+		SyncPolicy *ApplicationSyncPolicy `json:"syncPolicy,omitempty"`
+	}
+)
 
 type Application Resource[ApplicationSpec]
 
