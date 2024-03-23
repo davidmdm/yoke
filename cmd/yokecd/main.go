@@ -105,7 +105,7 @@ func run(cfg Config) error {
 	}
 
 	for _, resource := range resources {
-		debug("encoding: %s", resource.GetName())
+		debug("encoding: %s/%s", resource.GetKind(), resource.GetName())
 		if err := enc.Encode(resource); err != nil {
 			return err
 		}
