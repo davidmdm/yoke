@@ -79,6 +79,10 @@ func run(cfg Config) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("unexpected status code when fetching %s: %d", flight.Spec.WasmURL, resp.StatusCode)
+	}
+
 	wasm, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -111,7 +115,7 @@ func run(cfg Config) error {
 		}
 	}
 
-	debug("resources outputted %d", len(resources))
+	debug("resources: %d", len(resources))
 
 	return nil
 }
