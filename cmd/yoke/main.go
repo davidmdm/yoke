@@ -93,18 +93,6 @@ func run() error {
 			}
 			return Blackbox(ctx, *params)
 		}
-	case "exec":
-		{
-			var source io.Reader
-			if !term.IsTerminal(int(os.Stdin.Fd())) {
-				source = os.Stdin
-			}
-			params, err := GetExecParams(settings, source, subcmdArgs)
-			if err != nil {
-				return err
-			}
-			return Exec(ctx, *params)
-		}
 	case "version":
 		{
 			return Version()

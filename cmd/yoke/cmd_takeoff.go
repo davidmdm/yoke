@@ -32,6 +32,7 @@ type TakeoffFlightParams struct {
 
 type TakeoffParams struct {
 	GlobalSettings
+	TestRun        bool
 	SkipDryRun     bool
 	ForceConflicts bool
 	Namespace      string
@@ -62,6 +63,7 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 
 	RegisterGlobalFlags(flagset, &params.GlobalSettings)
 
+	flagset.BoolVar(&params.TestRun, "test-run", false, "test-run executes the underlying wasm and outputs it to stdout but does not apply any resources to the cluster")
 	flagset.BoolVar(&params.SkipDryRun, "skip-dry-run", false, "disables running dry run to resources before applying them")
 	flagset.BoolVar(&params.ForceConflicts, "force-conflicts", false, "force apply changes on field manager conflicts")
 	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
@@ -88,6 +90,10 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 	output, wasm, err := EvalFlight(ctx, params.Release, params.Flight)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate flight: %w", err)
+	}
+	if params.TestRun {
+		_, err = fmt.Print(string(output))
+		return err
 	}
 
 	kube, err := k8s.NewClientFromKubeConfig(params.KubeConfigPath)
