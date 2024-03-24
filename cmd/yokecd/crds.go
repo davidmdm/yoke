@@ -97,7 +97,7 @@ func (flight Flight) AsArgoApplication(manifest string, argo ArgoConfig) Applica
 	appSpec.Source.RepoURL = argo.RepoURL
 	appSpec.Source.TargetRevision = argo.Revision
 
-	appSpec.Source.Plugin.Name = cmp.Or(appSpec.Source.Plugin.Name, argo.PluginName)
+	appSpec.Source.Plugin.Name = cmp.Or(appSpec.Source.Plugin.Name, pluginName)
 	appSpec.Source.Plugin.Env = append(appSpec.Source.Plugin.Env, PluginEnv{
 		Name:  "FLIGHT",
 		Value: string(data),

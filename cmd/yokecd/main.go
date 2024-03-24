@@ -26,12 +26,13 @@ func main() {
 	}
 }
 
+const pluginName = "yokecd"
+
 type ArgoConfig struct {
-	Path       string
-	Namespace  string
-	RepoURL    string
-	Revision   string
-	PluginName string
+	Path      string
+	Namespace string
+	RepoURL   string
+	Revision  string
 }
 
 type Config struct {
@@ -44,7 +45,6 @@ func getConfig() (cfg Config) {
 	conf.Var(conf.Environ, &cfg.Argo.RepoURL, "ARGOCD_APP_SOURCE_REPO_URL")
 	conf.Var(conf.Environ, &cfg.Argo.Revision, "ARGOCD_APP_SOURCE_TARGET_REVISION", conf.Default("main"))
 	conf.Var(conf.Environ, &cfg.Argo.Namespace, "ARGOCD_APP_NAMESPACE")
-	conf.Var(conf.Environ, &cfg.Argo.PluginName, "ARGOCD_ENV_PLUGIN_NAME")
 	conf.Var(conf.Environ, &cfg.Flight, "ARGOCD_ENV_FLIGHT")
 	conf.Environ.MustParse()
 	return

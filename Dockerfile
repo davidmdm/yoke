@@ -11,5 +11,4 @@ COPY ./internal ./internal
 
 RUN go install ./cmd/yokecd
 
-COPY ./plugin.yaml /home/argocd/cmp-server/config/plugin.yaml
-
+COPY ./cmd/yokecd/plugin.yaml /home/argocd/cmp-server/config/plugin.yaml
