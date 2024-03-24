@@ -19,7 +19,7 @@ func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
 		return os.ReadFile(path)
 	}
 
-	if !slices.Contains([]string{":http", ":https"}, uri.Scheme) {
+	if !slices.Contains([]string{"http", "https"}, uri.Scheme) {
 		return nil, errors.New("unsupported protocol: %s - http(s) supported only")
 	}
 
@@ -35,6 +35,10 @@ func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
 	defer func() {
 		err = xerr.MultiErrFrom("", err, resp.Body.Close())
 	}()
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("unexpected statuscode fetching %s: %w", uri.String(), err)
+	}
 
 	return io.ReadAll(resp.Body)
 }
