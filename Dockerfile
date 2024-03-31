@@ -8,6 +8,7 @@ RUN go mod download
 
 COPY ./cmd/yokecd ./cmd/yokecd
 COPY ./internal ./internal
+COPY ./pkg ./pkg
 
 RUN go install ./cmd/yokecd
 

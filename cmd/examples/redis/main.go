@@ -17,7 +17,7 @@ func main() {
 }
 
 func run() error {
-	resources, err := redis.RenderChart(os.Args[0], "default", &redis.Values{})
+	resources, err := redis.RenderChart(os.Args[0], os.Getenv("NAMESPACE"), &redis.Values{})
 	if err != nil {
 		return fmt.Errorf("failed to render chart resources: %w", err)
 	}

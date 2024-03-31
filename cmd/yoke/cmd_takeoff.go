@@ -25,9 +25,10 @@ import (
 )
 
 type TakeoffFlightParams struct {
-	Path  string
-	Input io.Reader
-	Args  []string
+	Path      string
+	Input     io.Reader
+	Args      []string
+	Namespace string
 }
 
 type TakeoffParams struct {
@@ -35,7 +36,6 @@ type TakeoffParams struct {
 	TestRun        bool
 	SkipDryRun     bool
 	ForceConflicts bool
-	Namespace      string
 	Release        string
 	Out            string
 	Flight         TakeoffFlightParams
@@ -67,7 +67,7 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 	flagset.BoolVar(&params.SkipDryRun, "skip-dry-run", false, "disables running dry run to resources before applying them")
 	flagset.BoolVar(&params.ForceConflicts, "force-conflicts", false, "force apply changes on field manager conflicts")
 	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
-	flagset.StringVar(&params.Namespace, "namespace", "default", "preferred namespace for resources if they do not define one")
+	flagset.StringVar(&params.Flight.Namespace, "namespace", "default", "preferred namespace for resources if they do not define one")
 
 	args, params.Flight.Args = internal.CutArgs(args)
 
@@ -114,7 +114,7 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 			return err
 		}
 		if mapping.Scope.Name() == meta.RESTScopeNameNamespace && resource.GetNamespace() == "" {
-			resource.SetNamespace(cmp.Or(params.Namespace, "default"))
+			resource.SetNamespace(cmp.Or(params.Flight.Namespace, "default"))
 		}
 	}
 
@@ -182,7 +182,13 @@ func EvalFlight(ctx context.Context, release string, flight TakeoffFlightParams)
 		return nil, nil, fmt.Errorf("failed to read wasm program: %w", err)
 	}
 
-	output, err := wasi.Execute(ctx, wasm, release, flight.Input, flight.Args...)
+	output, err := wasi.Execute(ctx, wasi.ExecParams{
+		Wasm:    wasm,
+		Release: release,
+		Stdin:   flight.Input,
+		Args:    flight.Args,
+		Env:     map[string]string{"NAMESPACE": flight.Namespace},
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to execute wasm: %w", err)
 	}

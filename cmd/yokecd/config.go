@@ -10,9 +10,10 @@ import (
 )
 
 type Parameters struct {
-	WasmURL string
-	Input   string
-	Args    []string
+	WasmURL  string
+	WasmPath string
+	Input    string
+	Args     []string
 }
 
 var _ encoding.TextUnmarshaler = new(Parameters)
@@ -29,14 +30,15 @@ func (parameters *Parameters) UnmarshalText(data []byte) error {
 		return err
 	}
 
-	wasmURL, ok := internal.Find(elems, func(param Param) bool { return param.Name == "wasmURL" })
-	if !ok {
-		return fmt.Errorf("wasmURL parameter not found")
-	}
-	if wasmURL.String == "" {
-		return fmt.Errorf("wasmURL parameter must be a non empty string")
-	}
+	wasmURL, _ := internal.Find(elems, func(param Param) bool { return param.Name == "wasmURL" })
 	parameters.WasmURL = wasmURL.String
+
+	wasmPath, _ := internal.Find(elems, func(param Param) bool { return param.Name == "wasmPath" })
+	parameters.WasmPath = wasmPath.String
+
+	if parameters.WasmPath+parameters.WasmURL == "" {
+		return fmt.Errorf("one of wasmURL or wasmPath must be provided")
+	}
 
 	input, _ := internal.Find(elems, func(param Param) bool { return param.Name == "input" })
 	parameters.Input = input.String

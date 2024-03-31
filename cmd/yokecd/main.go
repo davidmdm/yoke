@@ -1,11 +1,10 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"strings"
 
@@ -14,11 +13,10 @@ import (
 
 	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/yoke/internal/wasi"
+	"github.com/davidmdm/yoke/pkg/yoke"
 )
 
 func main() {
-	debug(os.Getenv("ARGOCD_APP_PARAMETERS"))
-
 	cfg, err := getConfig()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -36,30 +34,20 @@ func run(cfg Config) error {
 
 	debug("downloading wasm: %s", cfg.Flight.WasmURL)
 
-	resp, err := http.Get(cfg.Flight.WasmURL)
+	wasm, err := yoke.LoadWasm(context.Background(), cmp.Or(cfg.Flight.WasmPath, cfg.Flight.WasmURL))
 	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("unexpected status code when fetching %s: %d", cfg.Flight.WasmURL, resp.StatusCode)
-	}
-
-	wasm, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to load wasm: %w", err)
 	}
 
 	debug("executing wasm")
 
-	data, err := wasi.Execute(
-		context.Background(),
-		wasm,
-		cfg.Application.Name,
-		strings.NewReader(cfg.Flight.Input),
-		cfg.Flight.Args...,
-	)
+	data, err := wasi.Execute(context.Background(), wasi.ExecParams{
+		Wasm:    wasm,
+		Release: cfg.Application.Name,
+		Stdin:   strings.NewReader(cfg.Flight.Input),
+		Args:    cfg.Flight.Args,
+		Env:     map[string]string{"NAMESPACE": cfg.Application.Namespace},
+	})
 	if err != nil {
 		return fmt.Errorf("failed to execute flight wasm: %w", err)
 	}
