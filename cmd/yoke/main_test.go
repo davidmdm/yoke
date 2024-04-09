@@ -123,3 +123,25 @@ func TestFailApplyDryRun(t *testing.T) {
 		`failed to apply resources: dry run: does-not-exist.apps.v1.deployment.sample-app: namespaces "does-not-exist" not found`,
 	)
 }
+
+func TestReleaseOwnership(t *testing.T) {
+	settings := GlobalSettings{KubeConfigPath: home.Kubeconfig}
+
+	makeParams := func(name string) TakeoffParams {
+		return TakeoffParams{
+			Release:        name,
+			GlobalSettings: settings,
+			Flight: TakeoffFlightParams{
+				Input: createBasicDeployment(t, "sample-app", "default"),
+			},
+		}
+	}
+
+	require.NoError(t, TakeOff(context.Background(), makeParams("foo")))
+
+	require.EqualError(
+		t,
+		TakeOff(context.Background(), makeParams("bar")),
+		`failed to validate ownership: conflict(s): resource "default.apps.v1.deployment.sample-app" is owned by release "foo"`,
+	)
+}
