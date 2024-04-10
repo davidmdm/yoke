@@ -205,6 +205,9 @@ func compress(path string) (out string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("could not create gzip writer: %w", err)
 	}
+	defer func() {
+		err = xerr.MultiErrFrom("", err, compressor.Close())
+	}()
 
 	source, err := os.Open(path)
 	if err != nil {
