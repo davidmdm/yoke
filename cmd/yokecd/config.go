@@ -3,17 +3,15 @@ package main
 import (
 	"encoding"
 	"encoding/json"
-	"fmt"
 
 	"github.com/davidmdm/conf"
 	"github.com/davidmdm/yoke/internal"
 )
 
 type Parameters struct {
-	WasmURL  string
-	WasmPath string
-	Input    string
-	Args     []string
+	Wasm  string
+	Input string
+	Args  []string
 }
 
 var _ encoding.TextUnmarshaler = new(Parameters)
@@ -30,15 +28,8 @@ func (parameters *Parameters) UnmarshalText(data []byte) error {
 		return err
 	}
 
-	wasmURL, _ := internal.Find(elems, func(param Param) bool { return param.Name == "wasmURL" })
-	parameters.WasmURL = wasmURL.String
-
-	wasmPath, _ := internal.Find(elems, func(param Param) bool { return param.Name == "wasmPath" })
-	parameters.WasmPath = wasmPath.String
-
-	if parameters.WasmPath+parameters.WasmURL == "" {
-		return fmt.Errorf("one of wasmURL or wasmPath must be provided")
-	}
+	wasm, _ := internal.Find(elems, func(param Param) bool { return param.Name == "wasm" })
+	parameters.Wasm = wasm.String
 
 	input, _ := internal.Find(elems, func(param Param) bool { return param.Name == "input" })
 	parameters.Input = input.String

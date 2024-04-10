@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -32,9 +31,9 @@ func main() {
 func run(cfg Config) error {
 	enc := json.NewEncoder(os.Stdout)
 
-	debug("downloading wasm: %s", cfg.Flight.WasmURL)
+	debug("downloading wasm: %s", cfg.Flight.Wasm)
 
-	wasm, err := yoke.LoadWasm(context.Background(), cmp.Or(cfg.Flight.WasmPath, cfg.Flight.WasmURL))
+	wasm, err := yoke.LoadWasm(context.Background(), cfg.Flight.Wasm)
 	if err != nil {
 		return fmt.Errorf("failed to load wasm: %w", err)
 	}
