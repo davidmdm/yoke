@@ -23,7 +23,7 @@ type ExecParams struct {
 
 func Execute(ctx context.Context, params ExecParams) (output []byte, err error) {
 	cfg := wazero.
-		NewRuntimeConfigInterpreter().
+		NewRuntimeConfig().
 		WithCloseOnContextDone(true)
 
 	// Create a new WebAssembly Runtime.
