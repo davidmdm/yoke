@@ -1,8 +1,10 @@
 package main
 
 import (
+	"compress/gzip"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -81,7 +83,7 @@ type Releaser struct {
 	DryRun   bool
 }
 
-func (releaser Releaser) handlePath(name string) error {
+func (releaser Releaser) handlePath(name string) (err error) {
 	version := releaser.Versions[name]
 
 	if version != "" {
@@ -147,6 +149,11 @@ func (releaser Releaser) handlePath(name string) error {
 		return fmt.Errorf("failed to build wasm: %w", err)
 	}
 
+	outputPath, err = compress(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to compress wasm: %w", err)
+	}
+
 	tag := fmt.Sprintf("%s/%s", name, "v0.0.0-"+time.Now().Format("20060201150405"))
 
 	if releaser.DryRun {
@@ -181,4 +188,35 @@ func release(tag, path string) error {
 		return fmt.Errorf("%w: %s", err, out)
 	}
 	return nil
+}
+
+func compress(path string) (out string, err error) {
+	output := path + ".gz"
+
+	destination, err := os.Create(output)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		err = xerr.MultiErrFrom("", err, destination.Close())
+	}()
+
+	compressor, err := gzip.NewWriterLevel(destination, gzip.BestCompression)
+	if err != nil {
+		return "", fmt.Errorf("could not create gzip writer: %w", err)
+	}
+
+	source, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		err = xerr.MultiErrFrom("", err, source.Close())
+	}()
+
+	if _, err := io.Copy(compressor, source); err != nil {
+		return "", err
+	}
+
+	return output, nil
 }

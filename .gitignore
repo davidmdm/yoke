@@ -2,8 +2,8 @@
 .idea
 
 *.wasm
+*.wasm.gz
+
 *.out
 
 test_output
-
-
