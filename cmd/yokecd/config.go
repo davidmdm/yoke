@@ -3,6 +3,7 @@ package main
 import (
 	"encoding"
 	"encoding/json"
+	"strings"
 
 	"github.com/davidmdm/conf"
 	"github.com/davidmdm/yoke/internal"
@@ -29,7 +30,7 @@ func (parameters *Parameters) UnmarshalText(data []byte) error {
 	}
 
 	wasm, _ := internal.Find(elems, func(param Param) bool { return param.Name == "wasm" })
-	parameters.Wasm = wasm.String
+	parameters.Wasm = strings.TrimLeft(wasm.String, "/")
 
 	input, _ := internal.Find(elems, func(param Param) bool { return param.Name == "input" })
 	parameters.Input = input.String
