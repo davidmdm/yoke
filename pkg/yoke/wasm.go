@@ -39,7 +39,7 @@ func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
 	}()
 
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("unexpected statuscode fetching %s: %w", uri.String(), err)
+		return nil, fmt.Errorf("unexpected statuscode fetching %s: %d", uri.String(), resp.StatusCode)
 	}
 
 	if resp.Header.Get("Content-Encoding") == "gzip" {
