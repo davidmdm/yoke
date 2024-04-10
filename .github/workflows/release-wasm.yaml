@@ -31,4 +31,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          go run ./cmd/internal/releaser -cmd yokecd
+          go run ./cmd/internal/releaser -cmd yokecd-installer
