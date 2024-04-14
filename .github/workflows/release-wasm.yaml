@@ -4,6 +4,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -26,7 +29,16 @@ jobs:
           cache-dependency-path: go.sum
           cache: true
 
+      - name: Run tests
+        shell: bash
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@latest
+          go install sigs.k8s.io/kind@v0.22.0
+
+          task test
+
       - name: Build and Release Flights
+        if: github.ref == 'refs/heads/main'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
