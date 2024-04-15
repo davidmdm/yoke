@@ -138,6 +138,9 @@ func TestReleaseOwnership(t *testing.T) {
 	}
 
 	require.NoError(t, TakeOff(context.Background(), makeParams("foo")))
+	defer func() {
+		require.NoError(t, Mayday(context.Background(), MaydayParams{Release: "foo", GlobalSettings: settings}))
+	}()
 
 	require.EqualError(
 		t,

@@ -166,7 +166,7 @@ func (client Client) RemoveOrphans(ctx context.Context, previous, current []*uns
 func (client Client) GetRevisions(ctx context.Context, release string) (*internal.Revisions, error) {
 	name := releaseName(release)
 
-	configMap, err := client.clientset.CoreV1().ConfigMaps(NSKubeSystem).Get(ctx, name, metav1.GetOptions{})
+	secret, err := client.clientset.CoreV1().Secrets(NSKubeSystem).Get(ctx, name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
 		return &internal.Revisions{Release: release}, nil
 	}
@@ -175,7 +175,7 @@ func (client Client) GetRevisions(ctx context.Context, release string) (*interna
 	}
 
 	var revisions internal.Revisions
-	if err := json.Unmarshal([]byte(configMap.Data[KeyRevisions]), &revisions); err != nil {
+	if err := json.Unmarshal([]byte(secret.Data[KeyRevisions]), &revisions); err != nil {
 		return nil, err
 	}
 
@@ -185,23 +185,23 @@ func (client Client) GetRevisions(ctx context.Context, release string) (*interna
 func (client Client) UpsertRevisions(ctx context.Context, release string, revisions *internal.Revisions) error {
 	name := releaseName(release)
 
-	configMaps := client.clientset.CoreV1().ConfigMaps(NSKubeSystem)
+	secrets := client.clientset.CoreV1().Secrets(NSKubeSystem)
 
 	data, err := json.Marshal(revisions)
 	if err != nil {
 		return err
 	}
 
-	configMap, err := configMaps.Get(ctx, name, metav1.GetOptions{})
+	secret, err := secrets.Get(ctx, name, metav1.GetOptions{})
 	if kerrors.IsNotFound(err) {
-		_, err := configMaps.Create(
+		_, err := secrets.Create(
 			ctx,
-			&corev1.ConfigMap{
+			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   name,
 					Labels: map[string]string{"internal.yoke/kind": "revisions"},
 				},
-				Data: map[string]string{
+				StringData: map[string]string{
 					KeyRelease:   release,
 					KeyRevisions: string(data),
 				},
@@ -215,9 +215,9 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 		return fmt.Errorf("failed to get revisions: %w", err)
 	}
 
-	configMap.Data[KeyRevisions] = string(data)
+	secret.StringData[KeyRevisions] = string(data)
 
-	_, err = configMaps.Update(ctx, configMap, metav1.UpdateOptions{FieldManager: "halloumu"})
+	_, err = secrets.Update(ctx, secret, metav1.UpdateOptions{FieldManager: "halloumu"})
 	return err
 }
 
@@ -318,15 +318,15 @@ func (client Client) ValidateOwnership(ctx context.Context, release string, reso
 }
 
 func (client Client) GetAllRevisions(ctx context.Context) ([]internal.Revisions, error) {
-	configMaps := client.clientset.CoreV1().ConfigMaps(NSKubeSystem)
+	secrets := client.clientset.CoreV1().Secrets(NSKubeSystem)
 
-	configs, err := configMaps.List(ctx, metav1.ListOptions{LabelSelector: "internal.yoke/kind=revisions"})
+	list, err := secrets.List(ctx, metav1.ListOptions{LabelSelector: "internal.yoke/kind=revisions"})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list revisions: %w", err)
 	}
 
-	results := make([]internal.Revisions, len(configs.Items))
-	for i, cfg := range configs.Items {
+	results := make([]internal.Revisions, len(list.Items))
+	for i, cfg := range list.Items {
 		var revisions internal.Revisions
 		if err := json.Unmarshal([]byte(cfg.Data[KeyRevisions]), &revisions); err != nil {
 			return nil, fmt.Errorf("could not parse release %q state: %w", cfg.Data[KeyRelease], err)
@@ -339,7 +339,7 @@ func (client Client) GetAllRevisions(ctx context.Context) ([]internal.Revisions,
 
 func (client Client) DeleteRevisions(ctx context.Context, release string) error {
 	return client.clientset.CoreV1().
-		ConfigMaps(NSKubeSystem).
+		Secrets(NSKubeSystem).
 		Delete(ctx, releaseName(release), metav1.DeleteOptions{})
 }
 
