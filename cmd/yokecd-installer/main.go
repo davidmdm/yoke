@@ -4,20 +4,19 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"slices"
 	"strings"
 
+	"github.com/davidmdm/yoke/cmd/yokecd-installer/argocd"
+	"golang.org/x/term"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
-
-// install.yaml downloaded from https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-
-//go:embed install.yaml
-var install string
 
 func main() {
 	if err := run(); err != nil {
@@ -26,19 +25,33 @@ func main() {
 	}
 }
 
+var (
+	release   = os.Args[0]
+	namespace = os.Getenv("NAMESPACE")
+)
+
 func run() error {
-	var resources []*unstructured.Unstructured
-	for _, manifest := range strings.Split(install, "\n---\n") {
-		var resource unstructured.Unstructured
-		if err := yaml.Unmarshal([]byte(manifest), &resource); err != nil {
-			return err
+	values := map[string]any{
+		"redis-ha": map[string]any{
+			"enabled": false,
+		},
+	}
+
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		if err := yaml.NewYAMLToJSONDecoder(os.Stdin).Decode(&values); err != nil && err != io.EOF {
+			return fmt.Errorf("failed to decode values: %w", err)
 		}
-		resources = append(resources, &resource)
+	}
+
+	resources, err := argocd.RenderChart(release, namespace, values)
+	if err != nil {
+		return fmt.Errorf("failed to render argocd chart: %w", err)
 	}
 
 	repoServer, i := func() (*unstructured.Unstructured, int) {
+		repoServerName := release + "-argocd-repo-server"
 		for i, resource := range resources {
-			if resource.GetName() == "argocd-repo-server" && resource.GetKind() == "Deployment" {
+			if resource.GetName() == repoServerName && resource.GetKind() == "Deployment" {
 				return resource, i
 			}
 		}
@@ -99,7 +112,34 @@ func run() error {
 
 	resources[i] = resource
 
-	return json.NewEncoder(os.Stdout).Encode(resources)
+	slices.SortFunc(resources, func(a, b *unstructured.Unstructured) int {
+		const rbac = "rbac.authorization.k8s.io"
+		groupA := a.GroupVersionKind().Group
+		groupB := b.GroupVersionKind().Group
+
+		switch {
+		case groupA == "" && a.GetKind() == "ServiceAccount":
+			return -1
+		case groupB == "" && b.GetKind() == "ServiceAccount":
+			return 1
+		case groupA == rbac && groupB != rbac:
+			return -1
+		case groupA != rbac && groupB == rbac:
+			return 1
+		default:
+			return 0
+		}
+	})
+
+	var finalResources []*unstructured.Unstructured
+	for _, resource := range resources {
+		if strings.HasSuffix(resource.GetName(), "-test") {
+			continue
+		}
+		finalResources = append(finalResources, resource)
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(finalResources)
 }
 
 func ptr[T any](value T) *T { return &value }
