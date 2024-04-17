@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/davidmdm/x/xerr"
 )
@@ -42,7 +43,7 @@ func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
 		return nil, fmt.Errorf("unexpected statuscode fetching %s: %d", uri.String(), resp.StatusCode)
 	}
 
-	if resp.Header.Get("Content-Encoding") == "gzip" {
+	if resp.Header.Get("Content-Encoding") == "gzip" || strings.HasSuffix(req.URL.Path, ".gz") {
 		return io.ReadAll(gzipReader(resp.Body))
 	}
 
