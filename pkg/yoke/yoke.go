@@ -52,7 +52,10 @@ func (client Client) Takeoff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to validate ownership: %w", err)
 	}
 
-	applyOpts := k8s.ApplyResourcesOpts{SkipDryRun: params.SkipDryRun}
+	applyOpts := k8s.ApplyResourcesOpts{
+		SkipDryRun:     params.SkipDryRun,
+		ForceConflicts: params.ForceConflicts,
+	}
 	if err := client.k8s.ApplyResources(ctx, params.Resources, applyOpts); err != nil {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}

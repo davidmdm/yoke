@@ -215,6 +215,10 @@ func (client Client) UpsertRevisions(ctx context.Context, release string, revisi
 		return fmt.Errorf("failed to get revisions: %w", err)
 	}
 
+	if secret.StringData == nil {
+		secret.StringData = make(map[string]string)
+	}
+
 	secret.StringData[KeyRevisions] = string(data)
 
 	_, err = secrets.Update(ctx, secret, metav1.UpdateOptions{FieldManager: "halloumu"})
