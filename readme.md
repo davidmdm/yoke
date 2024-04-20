@@ -1,7 +1,5 @@
 # yoke - Infrastructure-as-Code (IaC) Package Deployer for Kubernetes
 
-<img src="./yoke.jpg" width=600/>
-
 ## Overview
 
 yoke is a Helm-inspired infrastructure-as-code (IaC) package deployer.
