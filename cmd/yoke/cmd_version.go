@@ -15,12 +15,19 @@ func Version() error {
 	tbl.SetStyle(table.StyleRounded)
 
 	tbl.AppendRow(table.Row{"yoke", info.Main.Version})
+	tbl.AppendSeparator()
+
+	modules := []string{
+		"k8s.io/client-go",
+		"github.com/tetratelabs/wazero",
+	}
+
+	slices.Sort(modules)
 
 	for _, mod := range info.Deps {
-		if !slices.Contains([]string{"k8s.io/client-go"}, mod.Path) {
-			continue
+		if slices.Contains(modules, mod.Path) {
+			tbl.AppendRow(table.Row{mod.Path, mod.Version})
 		}
-		tbl.AppendRow(table.Row{mod.Path, mod.Version})
 	}
 
 	fmt.Println(tbl.Render())
