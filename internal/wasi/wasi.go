@@ -11,6 +11,7 @@ import (
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 
 	"github.com/davidmdm/x/xerr"
+	"github.com/davidmdm/yoke/internal"
 )
 
 type ExecParams struct {
@@ -22,6 +23,8 @@ type ExecParams struct {
 }
 
 func Execute(ctx context.Context, params ExecParams) (output []byte, err error) {
+	defer internal.DebugTimer(ctx, "wasm compile and execute")()
+
 	cfg := wazero.
 		NewRuntimeConfig().
 		WithCloseOnContextDone(true)

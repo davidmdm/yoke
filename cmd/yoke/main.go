@@ -35,10 +35,7 @@ func init() {
 }
 
 func run() error {
-	ctx, done := xcontext.WithSignalCancelation(context.Background(), syscall.SIGINT)
-	defer done()
-
-	var settings GlobalSettings
+	settings := GlobalSettings{Verbose: new(bool)}
 	RegisterGlobalFlags(flag.CommandLine, &settings)
 
 	flag.Usage = func() {
@@ -48,6 +45,11 @@ func run() error {
 	}
 
 	flag.Parse()
+
+	ctx, done := xcontext.WithSignalCancelation(context.Background(), syscall.SIGINT)
+	defer done()
+
+	ctx = internal.WithDebugFlag(ctx, settings.Verbose)
 
 	if len(flag.Args()) == 0 {
 		flag.Usage()
@@ -104,8 +106,10 @@ func run() error {
 
 type GlobalSettings struct {
 	KubeConfigPath string
+	Verbose        *bool
 }
 
 func RegisterGlobalFlags(flagset *flag.FlagSet, settings *GlobalSettings) {
 	flagset.StringVar(&settings.KubeConfigPath, "kubeconfig", home.Kubeconfig, "path to kube config")
+	flagset.BoolVar(settings.Verbose, "verbose", false, "verbose output mode")
 }

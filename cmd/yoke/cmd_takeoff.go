@@ -108,6 +108,8 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		return fmt.Errorf("failed to unmarshal raw resources: %w", err)
 	}
 
+	complete := internal.DebugTimer(ctx, "looking up resource mappings")
+
 	for _, resource := range resources {
 		mapping, err := kube.LookupResourceMapping(resource)
 		if err != nil {
@@ -117,6 +119,8 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 			resource.SetNamespace(cmp.Or(params.Flight.Namespace, "default"))
 		}
 	}
+
+	complete()
 
 	internal.AddHallmouiMetadata(resources, params.Release)
 

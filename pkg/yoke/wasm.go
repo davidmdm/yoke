@@ -14,9 +14,12 @@ import (
 	"strings"
 
 	"github.com/davidmdm/x/xerr"
+	"github.com/davidmdm/yoke/internal"
 )
 
 func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
+	defer internal.DebugTimer(ctx, "load wasm")()
+
 	uri, _ := url.Parse(path)
 	if uri.Scheme == "" {
 		return loadFile(path)

@@ -74,6 +74,8 @@ type ApplyResourcesOpts struct {
 }
 
 func (client Client) ApplyResources(ctx context.Context, resources []*unstructured.Unstructured, opts ApplyResourcesOpts) error {
+	defer internal.DebugTimer(ctx, "apply resources")()
+
 	var errs []error
 
 	if !opts.SkipDryRun {
@@ -102,6 +104,21 @@ type ApplyOpts struct {
 }
 
 func (client Client) ApplyResource(ctx context.Context, resource *unstructured.Unstructured, opts ApplyOpts) error {
+	defer internal.DebugTimer(
+		ctx,
+		fmt.Sprintf(
+			"%sapply resource %s/%s",
+			func() string {
+				if opts.DryRun {
+					return "dry "
+				}
+				return ""
+			}(),
+			resource.GetKind(),
+			resource.GetName(),
+		),
+	)()
+
 	resourceInterface, err := client.GetDynamicResourceInterface(resource)
 	if err != nil {
 		return fmt.Errorf("failed to resolve resource: %w", err)

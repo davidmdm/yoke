@@ -37,6 +37,8 @@ type TakeoffParams struct {
 }
 
 func (client Client) Takeoff(ctx context.Context, params TakeoffParams) error {
+	defer internal.DebugTimer(ctx, "takeoff")()
+
 	revisions, err := client.k8s.GetRevisions(ctx, params.Release)
 	if err != nil {
 		return fmt.Errorf("failed to get revision history: %w", err)
