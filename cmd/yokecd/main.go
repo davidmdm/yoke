@@ -29,7 +29,7 @@ func main() {
 }
 
 func run(cfg Config) error {
-	enc := json.NewEncoder(os.Stdout)
+	out := json.NewEncoder(os.Stdout)
 
 	debug("downloading wasm: %s", cfg.Flight.Wasm)
 
@@ -60,7 +60,7 @@ func run(cfg Config) error {
 
 	for _, resource := range resources {
 		debug("encoding: %s/%s", resource.GetKind(), resource.GetName())
-		if err := enc.Encode(resource); err != nil {
+		if err := out.Encode(resource); err != nil {
 			return err
 		}
 	}

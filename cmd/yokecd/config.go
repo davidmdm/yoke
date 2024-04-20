@@ -3,6 +3,7 @@ package main
 import (
 	"encoding"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/davidmdm/conf"
@@ -31,6 +32,10 @@ func (parameters *Parameters) UnmarshalText(data []byte) error {
 
 	wasm, _ := internal.Find(elems, func(param Param) bool { return param.Name == "wasm" })
 	parameters.Wasm = strings.TrimLeft(wasm.String, "/")
+
+	if parameters.Wasm == "" {
+		return fmt.Errorf("invalid config: wasm parameter must be provided")
+	}
 
 	input, _ := internal.Find(elems, func(param Param) bool { return param.Name == "input" })
 	parameters.Input = input.String

@@ -22,7 +22,11 @@ func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
 
 	uri, _ := url.Parse(path)
 	if uri.Scheme == "" {
-		return loadFile(path)
+		wasm, err := loadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load file: %s: %w", path, err)
+		}
+		return wasm, nil
 	}
 
 	if !slices.Contains([]string{"http", "https"}, uri.Scheme) {
