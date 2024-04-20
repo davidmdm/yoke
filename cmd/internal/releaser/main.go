@@ -12,10 +12,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davidmdm/x/xerr"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"golang.org/x/mod/semver"
+
+	"github.com/davidmdm/x/xerr"
 )
 
 func main() {

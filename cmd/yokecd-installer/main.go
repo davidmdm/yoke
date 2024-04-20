@@ -9,13 +9,15 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/davidmdm/yoke/cmd/yokecd-installer/argocd"
 	"golang.org/x/term"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
+
+	"github.com/davidmdm/yoke/cmd/yokecd-installer/argocd"
+	"github.com/davidmdm/yoke/pkg/flight"
 )
 
 func main() {
@@ -24,11 +26,6 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-var (
-	release   = os.Args[0]
-	namespace = os.Getenv("NAMESPACE")
-)
 
 func run() error {
 	values := map[string]any{
@@ -43,13 +40,13 @@ func run() error {
 		}
 	}
 
-	resources, err := argocd.RenderChart(release, namespace, values)
+	resources, err := argocd.RenderChart(flight.Release(), flight.Namespace(), values)
 	if err != nil {
 		return fmt.Errorf("failed to render argocd chart: %w", err)
 	}
 
 	repoServer, i := func() (*unstructured.Unstructured, int) {
-		repoServerName := release + "-argocd-repo-server"
+		repoServerName := flight.Release() + "-argocd-repo-server"
 		for i, resource := range resources {
 			if resource.GetName() == repoServerName && resource.GetKind() == "Deployment" {
 				return resource, i
