@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/davidmdm/x/xerr"
 	"github.com/go-git/go-git/v5"
@@ -49,7 +49,6 @@ func run() error {
 	versions := map[string]string{}
 
 	iter.ForEach(func(r *plumbing.Reference) error {
-		fmt.Println("detected tag:", r.Name().String())
 		release, version := path.Split(r.Name()[len("refs/tags/"):].String())
 		if !semver.IsValid(version) {
 			return nil
@@ -69,12 +68,12 @@ func run() error {
 
 	var errs []error
 	for _, cmd := range commands {
-		if err := releaser.handlePath(cmd); err != nil {
-			errs = append(errs, fmt.Errorf("failed to process %s: %w", cmd, err))
+		if err := releaser.ReleaseWasmBinary(cmd); err != nil {
+			errs = append(errs, fmt.Errorf("failed to release %s: %w", cmd, err))
 		}
 	}
 
-	return xerr.MultiErrOrderedFrom("failed to release", errs...)
+	return xerr.MultiErrOrderedFrom("", errs...)
 }
 
 type Releaser struct {
@@ -83,65 +82,22 @@ type Releaser struct {
 	DryRun   bool
 }
 
-func (releaser Releaser) handlePath(name string) (err error) {
+func (releaser Releaser) ReleaseWasmBinary(name string) (err error) {
 	version := releaser.Versions[name]
 
-	if version != "" {
-		tag := path.Join(name, version)
-
-		hash, err := releaser.Repo.ResolveRevision(plumbing.Revision(plumbing.NewTagReferenceName(tag)))
+	if version == "" {
+		fmt.Println("No version found for", name)
+	} else if semver.Compare(version, "v0.0.1") < 0 {
+		fmt.Printf("%s is pre v0.0.1... tagging new release\n", name)
+	} else if version != "" {
+		diff, err := releaser.HasDiff(name)
 		if err != nil {
-			return fmt.Errorf("failed to resolve: %s: %w", tag, err)
+			return fmt.Errorf("failed to check for diff: %w", err)
 		}
 
-		commit, err := releaser.Repo.CommitObject(*hash)
-		if err != nil {
-			return fmt.Errorf("failed to get commit for tag %s: %w", tag, err)
-		}
-
-		h, err := releaser.Repo.Head()
-		if err != nil {
-			return fmt.Errorf("failed to resolve head: %w", err)
-		}
-
-		head, err := releaser.Repo.CommitObject(h.Hash())
-		if err != nil {
-			return fmt.Errorf("failed to get head commit: %w", err)
-		}
-
-		headTree, err := head.Tree()
-		if err != nil {
-			return fmt.Errorf("failed to get tree for head commit: %w", err)
-		}
-
-		commitTree, err := commit.Tree()
-		if err != nil {
-			return fmt.Errorf("failed to get tree for tag commit: %w", err)
-		}
-
-		changes, err := headTree.Diff(commitTree)
-		if err != nil {
-			return fmt.Errorf("failed to diff trees: %w", err)
-		}
-
-		var changed bool
-		for _, change := range changes {
-			var (
-				from = change.From.Name
-				to   = change.To.Name
-			)
-			if strings.HasPrefix(from, "cmd/"+name+"/") || strings.HasPrefix(to, "cmd/"+name+"/") {
-				fmt.Printf("detected change from %s to %s\n", from, to)
-				changed = true
-				break
-			}
-		}
-
-		if !changed {
+		if !diff {
 			return nil
 		}
-	} else {
-		fmt.Println("No version found for", name)
 	}
 
 	outputPath, err := build(filepath.Join("cmd", name))
@@ -154,7 +110,14 @@ func (releaser Releaser) handlePath(name string) (err error) {
 		return fmt.Errorf("failed to compress wasm: %w", err)
 	}
 
-	tag := fmt.Sprintf("%s/%s", name, "v0.0.0-"+time.Now().Format("20060201150405"))
+	version = func() string {
+		patch := semver.Canonical(version)[len(semver.MajorMinor(version)):]
+		patchNum, _ := strconv.Atoi(patch)
+		patchNum++
+		return fmt.Sprintf("v0.0.%d", patchNum)
+	}()
+
+	tag := fmt.Sprintf("%s/%s", name, version)
 
 	if releaser.DryRun {
 		fmt.Println("dry-run: create realease", tag)
@@ -165,6 +128,60 @@ func (releaser Releaser) handlePath(name string) (err error) {
 	}
 
 	return nil
+}
+
+func (releaser Releaser) HasDiff(name string) (bool, error) {
+	tag := path.Join(name, releaser.Versions[name])
+
+	hash, err := releaser.Repo.ResolveRevision(plumbing.Revision(plumbing.NewTagReferenceName(tag)))
+	if err != nil {
+		return false, fmt.Errorf("failed to resolve: %s: %w", tag, err)
+	}
+
+	commit, err := releaser.Repo.CommitObject(*hash)
+	if err != nil {
+		return false, fmt.Errorf("failed to get commit for tag %s: %w", tag, err)
+	}
+
+	h, err := releaser.Repo.Head()
+	if err != nil {
+		return false, fmt.Errorf("failed to resolve head: %w", err)
+	}
+
+	head, err := releaser.Repo.CommitObject(h.Hash())
+	if err != nil {
+		return false, fmt.Errorf("failed to get head commit: %w", err)
+	}
+
+	headTree, err := head.Tree()
+	if err != nil {
+		return false, fmt.Errorf("failed to get tree for head commit: %w", err)
+	}
+
+	commitTree, err := commit.Tree()
+	if err != nil {
+		return false, fmt.Errorf("failed to get tree for tag commit: %w", err)
+	}
+
+	changes, err := headTree.Diff(commitTree)
+	if err != nil {
+		return false, fmt.Errorf("failed to diff trees: %w", err)
+	}
+
+	var changed bool
+	for _, change := range changes {
+		var (
+			from = change.From.Name
+			to   = change.To.Name
+		)
+		if strings.HasPrefix(from, "cmd/"+name+"/") || strings.HasPrefix(to, "cmd/"+name+"/") {
+			fmt.Printf("detected change from %s to %s\n", from, to)
+			changed = true
+			break
+		}
+	}
+
+	return changed, nil
 }
 
 func build(path string) (string, error) {
