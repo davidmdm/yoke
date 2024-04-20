@@ -10,16 +10,22 @@
   # deploy a local flight
   yoke takeoff my-release ./main.wasm
 
-  # deploy passing arguments to the flight
-  yoke takeoff my-release ./main.wasm -- -env prod
+  # gzipped wasm files are supported
+  yoke takeoff my-release ./main.wasm.gz
 
   # deploy a remote flight
   yoke takeoff my-release https://github.com/my_org/infra/releases/v1.2.3-release.wasm
 
-  # deploy a flight from a file
+  # deploy passing arguments to the flight
+  yoke takeoff my-release ./main.wasm -- -env prod
+
+  # deploy passing data over stdin to the flight
+  yoke takeoff my-release ./main.wasm < input.file
+
+  # omit the wasm asset and stdin is interpreted as the desired output of your flight
   yoke takeoff my-release < resources.json
 
-  # deploy a flight from a unix pipe
+  # deploy resources from a unix pipe
   generate-resources.sh | yoke takeoff my-releae
 
 !cyan Flags:
