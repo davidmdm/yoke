@@ -112,7 +112,7 @@ func (releaser Releaser) ReleaseWasmBinary(name string) (err error) {
 	}
 
 	version = func() string {
-		patch := semver.Canonical(version)[len(semver.MajorMinor(version)):]
+		patch := strings.TrimPrefix(semver.Canonical(version), semver.MajorMinor(version)+".")
 		patchNum, _ := strconv.Atoi(patch)
 		patchNum++
 		return fmt.Sprintf("v0.0.%d", patchNum)
