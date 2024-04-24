@@ -13,3 +13,7 @@ COPY ./pkg ./pkg
 RUN go install ./cmd/yokecd
 
 COPY ./cmd/yokecd/plugin.yaml /home/argocd/cmp-server/config/plugin.yaml
+
+RUN chmod -R 777 /go && mkdir /.cache && chmod -R 777 /.cache
+
+

@@ -4,6 +4,7 @@ import (
 	"encoding"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/davidmdm/conf"
@@ -11,6 +12,7 @@ import (
 )
 
 type Parameters struct {
+	Build bool
 	Wasm  string
 	Input string
 	Args  []string
@@ -18,7 +20,7 @@ type Parameters struct {
 
 var _ encoding.TextUnmarshaler = new(Parameters)
 
-func (parameters *Parameters) UnmarshalText(data []byte) error {
+func (parameters *Parameters) UnmarshalText(data []byte) (err error) {
 	type Param struct {
 		Name   string   `json:"name"`
 		String string   `json:"string"`
@@ -30,11 +32,24 @@ func (parameters *Parameters) UnmarshalText(data []byte) error {
 		return err
 	}
 
+	build, _ := internal.Find(elems, func(param Param) bool { return param.Name == "build" })
+
+	if build.String != "" {
+		parameters.Build, err = strconv.ParseBool(build.String)
+		if err != nil {
+			return fmt.Errorf("invalid config: parsing parameter build: %w", err)
+		}
+	}
+
 	wasm, _ := internal.Find(elems, func(param Param) bool { return param.Name == "wasm" })
 	parameters.Wasm = strings.TrimLeft(wasm.String, "/")
 
-	if parameters.Wasm == "" {
-		return fmt.Errorf("invalid config: wasm parameter must be provided")
+	if parameters.Wasm == "" && !parameters.Build {
+		return fmt.Errorf("invalid config: wasm parameter must be provided or build enabled")
+	}
+
+	if parameters.Wasm != "" && parameters.Build {
+		return fmt.Errorf("invalid config: wasm asset cannot be present and build mod enabled")
 	}
 
 	input, _ := internal.Find(elems, func(param Param) bool { return param.Name == "input" })

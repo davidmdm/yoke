@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,30 +29,48 @@ func main() {
 	}
 }
 
-func run(cfg Config) error {
-	out := json.NewEncoder(os.Stdout)
+func run(cfg Config) (err error) {
+	data, err := func() ([]byte, error) {
+		if cfg.Flight.Build {
+			debug("building wasm")
+			cfg.Flight.Wasm, err = Build()
+			if err != nil {
+				return nil, fmt.Errorf("failed to build binary: %w", err)
+			}
+		}
 
-	debug("downloading wasm: %s", cfg.Flight.Wasm)
+		debug("loading wasm: %s", cfg.Flight.Wasm)
 
-	wasm, err := yoke.LoadWasm(context.Background(), cfg.Flight.Wasm)
-	if err != nil {
-		return fmt.Errorf("failed to load wasm: %w", err)
-	}
+		wasm, err := yoke.LoadWasm(context.Background(), cfg.Flight.Wasm)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load wasm: %w", err)
+		}
 
-	debug("executing wasm")
+		debug("executing wasm")
 
-	data, err := wasi.Execute(context.Background(), wasi.ExecParams{
-		Wasm:    wasm,
-		Release: cfg.Application.Name,
-		Stdin:   strings.NewReader(cfg.Flight.Input),
-		Args:    cfg.Flight.Args,
-		Env:     map[string]string{"NAMESPACE": cfg.Application.Namespace},
-	})
+		data, err := wasi.Execute(context.Background(), wasi.ExecParams{
+			Wasm:    wasm,
+			Release: cfg.Application.Name,
+			Stdin:   strings.NewReader(cfg.Flight.Input),
+			Args:    cfg.Flight.Args,
+			Env:     map[string]string{"NAMESPACE": cfg.Application.Namespace},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to execute wams: %w", err)
+		}
+		debug("wasm executed without error")
+
+		return data, nil
+	}()
 	if err != nil {
 		return fmt.Errorf("failed to execute flight wasm: %w", err)
 	}
 
-	debug("wasm executed without error")
+	return EncodeResources(json.NewEncoder(os.Stdout), data)
+}
+
+func EncodeResources(out *json.Encoder, data []byte) error {
+	debug("encoding resources")
 
 	var resources internal.List[*unstructured.Unstructured]
 	if err := yaml.Unmarshal(data, &resources); err != nil {
@@ -72,4 +91,21 @@ func run(cfg Config) error {
 
 func debug(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
+}
+
+func Build() (string, error) {
+	file, err := os.CreateTemp("", "main.*.wasm")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file to build wasm towards: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return "", fmt.Errorf("failed to close temp wasm file: %w", err)
+	}
+
+	cmd := exec.Command("go", "build", "-o", file.Name(), ".")
+	cmd.Env = append(os.Environ(), "GOOS=wasip1", "GOARCH=wasm")
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+
+	return file.Name(), cmd.Run()
 }
