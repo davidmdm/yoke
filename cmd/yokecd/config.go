@@ -1,14 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/davidmdm/conf"
 	"github.com/davidmdm/yoke/internal"
+	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type Parameters struct {
@@ -21,6 +22,12 @@ type Parameters struct {
 var _ encoding.TextUnmarshaler = new(Parameters)
 
 func (parameters *Parameters) UnmarshalText(data []byte) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("invalid config: %w", err)
+		}
+	}()
+
 	type Param struct {
 		Name   string   `json:"name"`
 		String string   `json:"string"`
@@ -28,7 +35,7 @@ func (parameters *Parameters) UnmarshalText(data []byte) (err error) {
 	}
 
 	var elems []Param
-	if err := json.Unmarshal(data, &elems); err != nil {
+	if err := yaml.NewYAMLToJSONDecoder(bytes.NewReader(data)).Decode(&elems); err != nil {
 		return err
 	}
 
@@ -37,7 +44,7 @@ func (parameters *Parameters) UnmarshalText(data []byte) (err error) {
 	if build.String != "" {
 		parameters.Build, err = strconv.ParseBool(build.String)
 		if err != nil {
-			return fmt.Errorf("invalid config: parsing parameter build: %w", err)
+			return fmt.Errorf("parsing parameter build: %w", err)
 		}
 	}
 
@@ -45,11 +52,11 @@ func (parameters *Parameters) UnmarshalText(data []byte) (err error) {
 	parameters.Wasm = strings.TrimLeft(wasm.String, "/")
 
 	if parameters.Wasm == "" && !parameters.Build {
-		return fmt.Errorf("invalid config: wasm parameter must be provided or build enabled")
+		return fmt.Errorf("wasm parameter must be provided or build enabled")
 	}
 
 	if parameters.Wasm != "" && parameters.Build {
-		return fmt.Errorf("invalid config: wasm asset cannot be present and build mod enabled")
+		return fmt.Errorf("wasm asset cannot be present and build enabled")
 	}
 
 	input, _ := internal.Find(elems, func(param Param) bool { return param.Name == "input" })
