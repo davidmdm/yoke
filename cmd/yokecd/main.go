@@ -37,6 +37,7 @@ func run(cfg Config) (err error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to build binary: %w", err)
 			}
+			defer os.Remove(cfg.Flight.Wasm)
 		}
 
 		debug("loading wasm: %s", cfg.Flight.Wasm)
