@@ -8,6 +8,6 @@
 
 !cyan Examples:
   # delete a release and all its revision history
-  yoke blackbox foo
+  yoke mayday foo
 
 !cyan Flags:

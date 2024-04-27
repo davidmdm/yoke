@@ -4,7 +4,7 @@
   yoke decent [flags] <release-name> <revision-id>
 
 !cyan Aliases:
-  restore
+  down, restore
 
 !cyan Examples:
   # restore state to revision history 42
