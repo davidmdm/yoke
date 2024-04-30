@@ -363,7 +363,7 @@ func (client Client) DeleteRevisions(ctx context.Context, release string) error 
 }
 
 func (client Client) EnsureNamespace(ctx context.Context, namespace string) error {
-	defer internal.DebugTimer(ctx, "ensuring namespace")()
+	defer internal.DebugTimer(ctx, "ensuring namespace: "+namespace)()
 
 	if _, err := client.clientset.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{}); err != nil {
 		if !kerrors.IsNotFound(err) {
