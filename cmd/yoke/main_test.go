@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -147,4 +148,34 @@ func TestReleaseOwnership(t *testing.T) {
 		TakeOff(context.Background(), makeParams("bar")),
 		`failed to validate ownership: conflict(s): resource "default.apps.v1.deployment.sample-app" is owned by release "foo"`,
 	)
+}
+
+func TestTakeoffWithNamespace(t *testing.T) {
+	rest, err := clientcmd.BuildConfigFromFlags("", home.Kubeconfig)
+	require.NoError(t, err)
+
+	client, err := kubernetes.NewForConfig(rest)
+	require.NoError(t, err)
+
+	_, err = client.CoreV1().Namespaces().Get(context.Background(), "test-ns", metav1.GetOptions{})
+	require.True(t, kerrors.IsNotFound(err))
+
+	settings := GlobalSettings{KubeConfigPath: home.Kubeconfig}
+
+	params := TakeoffParams{
+		Release:        "foo",
+		GlobalSettings: settings,
+		Flight: TakeoffFlightParams{
+			Input:     createBasicDeployment(t, "sample-app", "default"),
+			Namespace: "test-ns",
+		},
+	}
+
+	require.NoError(t, TakeOff(context.Background(), params))
+	defer func() {
+		require.NoError(t, Mayday(context.Background(), MaydayParams{Release: "foo", GlobalSettings: settings}))
+	}()
+
+	_, err = client.CoreV1().Namespaces().Get(context.Background(), "test-ns", metav1.GetOptions{})
+	require.NoError(t, err)
 }

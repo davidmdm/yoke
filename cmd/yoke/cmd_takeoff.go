@@ -135,6 +135,7 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		Release:        params.Release,
 		Resources:      resources,
 		FlightID:       params.Flight.Path,
+		Namespace:      params.Flight.Namespace,
 		Wasm:           wasm,
 		SkipDryRun:     params.SkipDryRun,
 		ForceConflicts: params.ForceConflicts,

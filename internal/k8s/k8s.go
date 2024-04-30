@@ -364,6 +364,26 @@ func (client Client) DeleteRevisions(ctx context.Context, release string) error 
 		Delete(ctx, releaseName(release), metav1.DeleteOptions{})
 }
 
+func (client Client) EnsureNamespace(ctx context.Context, namespace string) error {
+	defer internal.DebugTimer(ctx, "ensuring namespace")()
+
+	if _, err := client.clientset.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{}); err != nil {
+		if !kerrors.IsNotFound(err) {
+			return err
+		}
+
+		if _, err := client.clientset.CoreV1().Namespaces().Create(
+			ctx,
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}},
+			metav1.CreateOptions{},
+		); err != nil {
+			return fmt.Errorf("failed to create namespace: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func IsNamespaced(resource dynamic.ResourceInterface) bool {
 	_, ok := resource.(interface{ Namespace(string) bool })
 	return ok

@@ -29,13 +29,12 @@ func Execute(ctx context.Context, params ExecParams) (output []byte, err error) 
 		NewRuntimeConfig().
 		WithCloseOnContextDone(true)
 
-	// Create a new WebAssembly Runtime.
-	wasi := wazero.NewRuntimeWithConfig(ctx, cfg)
+	runtime := wazero.NewRuntimeWithConfig(ctx, cfg)
 	defer func() {
-		err = xerr.MultiErrFrom("", err, wasi.Close(ctx))
+		err = xerr.MultiErrFrom("", err, runtime.Close(ctx))
 	}()
 
-	wasi_snapshot_preview1.MustInstantiate(ctx, wasi)
+	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
 
 	var (
 		stdout bytes.Buffer
@@ -60,7 +59,7 @@ func Execute(ctx context.Context, params ExecParams) (output []byte, err error) 
 		moduleCfg = moduleCfg.WithEnv(key, value)
 	}
 
-	if _, err := wasi.InstantiateWithConfig(ctx, params.Wasm, moduleCfg); err != nil {
+	if _, err := runtime.InstantiateWithConfig(ctx, params.Wasm, moduleCfg); err != nil {
 		details := stderr.String()
 		if details == "" {
 			details = "(no output captured on stderr)"

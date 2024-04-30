@@ -31,6 +31,7 @@ type TakeoffParams struct {
 	Release        string
 	Resources      []*unstructured.Unstructured
 	FlightID       string
+	Namespace      string
 	Wasm           []byte
 	SkipDryRun     bool
 	ForceConflicts bool
@@ -52,6 +53,12 @@ func (client Client) Takeoff(ctx context.Context, params TakeoffParams) error {
 
 	if err := client.k8s.ValidateOwnership(ctx, params.Release, params.Resources); err != nil {
 		return fmt.Errorf("failed to validate ownership: %w", err)
+	}
+
+	if params.Namespace != "" {
+		if err := client.k8s.EnsureNamespace(ctx, params.Namespace); err != nil {
+			return fmt.Errorf("failed to ensure namespace: %w", err)
+		}
 	}
 
 	applyOpts := k8s.ApplyResourcesOpts{
