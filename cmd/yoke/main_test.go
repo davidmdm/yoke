@@ -10,12 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
-
 	appsv1config "k8s.io/client-go/applyconfigurations/apps/v1"
 	corev1config "k8s.io/client-go/applyconfigurations/core/v1"
 	metav1config "k8s.io/client-go/applyconfigurations/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/davidmdm/yoke/internal/home"
 	"github.com/davidmdm/yoke/internal/k8s"

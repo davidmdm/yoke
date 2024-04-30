@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/util/yaml"
+
 	"github.com/davidmdm/conf"
 	"github.com/davidmdm/yoke/internal"
-	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type Parameters struct {

@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/davidmdm/x/xerr"
-
 	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/yoke/internal/k8s"
 	"github.com/davidmdm/yoke/internal/wasi"
