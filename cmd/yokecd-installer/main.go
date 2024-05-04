@@ -27,10 +27,18 @@ func main() {
 	}
 }
 
+type Values struct {
+	Version string         `json:"version"`
+	ArgoCD  map[string]any `json:"argocd"`
+}
+
 func run() error {
-	values := map[string]any{
-		"redis-ha": map[string]any{
-			"enabled": false,
+	values := Values{
+		Version: "latest",
+		ArgoCD: map[string]any{
+			"redis-ha": map[string]any{
+				"enabled": false,
+			},
 		},
 	}
 
@@ -40,7 +48,7 @@ func run() error {
 		}
 	}
 
-	resources, err := argocd.RenderChart(flight.Release(), flight.Namespace(), values)
+	resources, err := argocd.RenderChart(flight.Release(), flight.Namespace(), values.ArgoCD)
 	if err != nil {
 		return fmt.Errorf("failed to render argocd chart: %w", err)
 	}
@@ -66,7 +74,7 @@ func run() error {
 	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
 		Name:            "yokecd",
 		Command:         []string{"/var/run/argocd/argocd-cmp-server"},
-		Image:           "davidmdm/yokecd:latest",
+		Image:           "davidmdm/yokecd:" + values.Version,
 		ImagePullPolicy: corev1.PullAlways,
 
 		VolumeMounts: []corev1.VolumeMount{
