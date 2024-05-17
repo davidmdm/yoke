@@ -7,10 +7,11 @@ yoke is a helm inspired infrastructure-as-code (IaC) package deployer.
 Deploys "yoke flights" to a kubernetes cluster.
 
 !cyan Available commands:
-takeoff   (aliases: up, apply)
-descent   (aliases: down, restore)
-mayday    (aliases: delete)
-blackbox  (aliases: inspect)
+takeoff      (aliases: up, apply)
+descent      (aliases: down, restore)
+mayday       (aliases: delete)
+blackbox     (aliases: inspect)
+turbulence   (aliases: drift)
 version
 
 !cyan Global Flags:

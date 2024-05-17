@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"flag"
@@ -13,13 +12,12 @@ import (
 	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/pmezard/go-difflib/difflib"
 	"gopkg.in/yaml.v3"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/davidmdm/ansi"
 	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/yoke/internal/k8s"
+	"github.com/davidmdm/yoke/internal/text"
 )
 
 type BlackboxParams struct {
@@ -175,67 +173,16 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		diffRevision[internal.Canonical(resource)] = resource.Object
 	}
 
-	var buffer bytes.Buffer
-	encoder := yaml.NewEncoder(&buffer)
-	encoder.SetIndent(2)
-
-	if err := encoder.Encode(primaryRevision); err != nil {
+	a, err := text.ToYamlFile(fmt.Sprintf("revision %d", params.RevisionID), primaryRevision)
+	if err != nil {
 		return err
 	}
 
-	a := buffer.String()
-
-	buffer.Reset()
-
-	if err := encoder.Encode(diffRevision); err != nil {
+	b, err := text.ToYamlFile(fmt.Sprintf("revision %d", params.DiffRevisionID), diffRevision)
+	if err != nil {
 		return err
 	}
 
-	b := buffer.String()
-
-	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A:        indentLines(difflib.SplitLines(a), "  "),
-		B:        indentLines(difflib.SplitLines(b), "  "),
-		FromFile: fmt.Sprintf("revision %d", params.RevisionID),
-		ToFile:   fmt.Sprintf("revision %d", params.DiffRevisionID),
-		Context:  params.Context,
-	})
-
-	diff = colorizeDiff(diff)
-
-	_, err = fmt.Fprint(os.Stdout, diff)
+	_, err = fmt.Fprint(os.Stdout, text.DiffColorized(a, b, params.Context))
 	return err
-}
-
-var (
-	green = ansi.MakeStyle(ansi.FgGreen)
-	red   = ansi.MakeStyle(ansi.FgRed)
-)
-
-func colorizeDiff(value string) string {
-	lines := strings.Split(value, "\n")
-	colorized := make([]string, len(lines))
-	for i, line := range lines {
-		if len(line) == 0 {
-			continue
-		}
-		switch line[0] {
-		case '-':
-			colorized[i] = green.Sprint(line)
-		case '+':
-			colorized[i] = red.Sprint(line)
-		default:
-			colorized[i] = line
-		}
-	}
-
-	return strings.Join(colorized, "\n")
-}
-
-func indentLines(lines []string, indent string) []string {
-	result := make([]string, len(lines))
-	for i, line := range lines {
-		result[i] = indent + line
-	}
-	return result
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -173,8 +174,64 @@ func TestTakeoffWithNamespace(t *testing.T) {
 	require.NoError(t, TakeOff(context.Background(), params))
 	defer func() {
 		require.NoError(t, Mayday(context.Background(), MaydayParams{Release: "foo", GlobalSettings: settings}))
+		require.NoError(t, client.CoreV1().Namespaces().Delete(context.Background(), "test-ns", metav1.DeleteOptions{}))
 	}()
 
 	_, err = client.CoreV1().Namespaces().Get(context.Background(), "test-ns", metav1.GetOptions{})
 	require.NoError(t, err)
+}
+
+func TestTurbulenceFix(t *testing.T) {
+	rest, err := clientcmd.BuildConfigFromFlags("", home.Kubeconfig)
+	require.NoError(t, err)
+
+	client, err := kubernetes.NewForConfig(rest)
+	require.NoError(t, err)
+
+	settings := GlobalSettings{KubeConfigPath: home.Kubeconfig}
+
+	takeoffParams := TakeoffParams{
+		GlobalSettings: settings,
+		Release:        "foo",
+		Flight: TakeoffFlightParams{
+			Input: strings.NewReader(`{
+					apiVersion: v1,
+					kind: ConfigMap,
+					metadata: {
+						name: test,
+						namespace: default,
+					},
+					data: {
+						key: value,
+					},
+				}`),
+		},
+	}
+
+	require.NoError(t, TakeOff(context.Background(), takeoffParams))
+	defer func() {
+		require.NoError(t, Mayday(context.Background(), MaydayParams{
+			GlobalSettings: settings,
+			Release:        takeoffParams.Release,
+		}))
+	}()
+
+	configmap, err := client.CoreV1().ConfigMaps("default").Get(context.Background(), "test", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "value", configmap.Data["key"])
+
+	configmap.Data["key"] = "corrupt"
+
+	_, err = client.CoreV1().ConfigMaps("default").Update(context.Background(), configmap, metav1.UpdateOptions{})
+	require.NoError(t, err)
+
+	configmap, err = client.CoreV1().ConfigMaps("default").Get(context.Background(), "test", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "corrupt", configmap.Data["key"])
+
+	require.NoError(t, Turbulence(context.Background(), TurbulenceParams{GlobalSettings: settings, Release: "foo", Fix: true}))
+
+	configmap, err = client.CoreV1().ConfigMaps("default").Get(context.Background(), "test", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "value", configmap.Data["key"])
 }

@@ -382,6 +382,28 @@ func (client Client) EnsureNamespace(ctx context.Context, namespace string) erro
 	return nil
 }
 
+func (client Client) GetInClusterState(ctx context.Context, resource *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	mapping, err := client.LookupResourceMapping(resource)
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup resource mapping %w", err)
+	}
+
+	resourceInterface := func() dynamic.ResourceInterface {
+		resourceInterface := client.dynamic.Resource(mapping.Resource)
+		if ns := resource.GetNamespace(); ns != "" {
+			return resourceInterface.Namespace(ns)
+		}
+		return resourceInterface
+	}()
+
+	state, err := resourceInterface.Get(ctx, resource.GetName(), metav1.GetOptions{})
+	if kerrors.IsNotFound(err) {
+		err = nil
+	}
+
+	return state, err
+}
+
 func IsNamespaced(resource dynamic.ResourceInterface) bool {
 	_, ok := resource.(interface{ Namespace(string) bool })
 	return ok
