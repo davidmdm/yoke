@@ -19,8 +19,8 @@ type File struct {
 
 func Diff(expected, actual File, context int) string {
 	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A:        indentLines(difflib.SplitLines(expected.Content), "  "),
-		B:        indentLines(difflib.SplitLines(actual.Content), "  "),
+		A:        difflib.SplitLines(expected.Content),
+		B:        difflib.SplitLines(actual.Content),
 		FromFile: expected.Name,
 		ToFile:   actual.Name,
 		Context:  context,
@@ -55,14 +55,6 @@ func colorize(value string) string {
 	}
 
 	return strings.Join(colorized, "\n")
-}
-
-func indentLines(lines []string, indent string) []string {
-	result := make([]string, len(lines))
-	for i, line := range lines {
-		result[i] = indent + line
-	}
-	return result
 }
 
 func ToYamlFile(name string, value any) (File, error) {

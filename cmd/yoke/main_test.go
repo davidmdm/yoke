@@ -230,8 +230,26 @@ func TestTurbulenceFix(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "corrupt", configmap.Data["key"])
 
-	var stderr bytes.Buffer
-	ctx := internal.WithStderr(context.Background(), &stderr)
+	var stdout, stderr bytes.Buffer
+	ctx := internal.WithStdio(context.Background(), &stdout, &stderr, nil)
+
+	require.NoError(t, Turbulence(ctx, TurbulenceParams{GlobalSettings: settings, Release: "foo", Fix: false, ConflictsOnly: true}))
+	require.Equal(
+		t,
+		strings.Join(
+			[]string{
+				"--- expected",
+				"+++ actual",
+				"@@ -5 +5 @@",
+				"-      key: value",
+				"+      key: corrupt",
+				"",
+			},
+			"\n",
+		),
+		stdout.String(),
+	)
+
 	require.NoError(t, Turbulence(ctx, TurbulenceParams{GlobalSettings: settings, Release: "foo", Fix: true}))
 	require.Equal(t, "fixed drift for: default.core.v1.configmap.test\n", stderr.String())
 

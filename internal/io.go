@@ -12,6 +12,13 @@ type (
 	stdinKey  struct{}
 )
 
+func WithStdio(ctx context.Context, out, err io.Writer, in io.Reader) context.Context {
+	ctx = WithStdout(ctx, out)
+	ctx = WithStderr(ctx, err)
+	ctx = WithStdin(ctx, in)
+	return ctx
+}
+
 func WithStdout(ctx context.Context, w io.Writer) context.Context {
 	return context.WithValue(ctx, stdoutKey{}, w)
 }

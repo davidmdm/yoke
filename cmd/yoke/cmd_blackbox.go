@@ -146,10 +146,7 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return fmt.Errorf("revision %d not found", params.RevisionID)
 	}
 
-	primaryRevision := make(map[string]any, len(revision.Resources))
-	for _, resource := range revision.Resources {
-		primaryRevision[internal.Canonical(resource)] = resource.Object
-	}
+	primaryRevision := internal.CanonicalObjectMap(revision.Resources)
 
 	if params.DiffRevisionID == 0 {
 		encoder := yaml.NewEncoder(os.Stdout)
@@ -168,7 +165,7 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return fmt.Errorf("revision %d not found", params.DiffRevisionID)
 	}
 
-	diffRevision := internal.CanonicalMap(revision.Resources)
+	diffRevision := internal.CanonicalObjectMap(revision.Resources)
 
 	a, err := text.ToYamlFile(fmt.Sprintf("revision %d", params.RevisionID), primaryRevision)
 	if err != nil {
