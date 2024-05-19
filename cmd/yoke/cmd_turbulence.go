@@ -8,9 +8,10 @@ import (
 	"os"
 	"strings"
 
+	"golang.org/x/term"
+
 	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/yoke/pkg/yoke"
-	"golang.org/x/term"
 )
 
 type TurbulenceParams struct {
