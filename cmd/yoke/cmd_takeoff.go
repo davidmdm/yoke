@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"golang.org/x/term"
 	y3 "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -41,6 +42,7 @@ type TakeoffParams struct {
 	Flight         TakeoffFlightParams
 	DiffOnly       bool
 	Context        int
+	Color          bool
 }
 
 //go:embed cmd_takeoff_help.txt
@@ -69,6 +71,7 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 	flagset.BoolVar(&params.SkipDryRun, "skip-dry-run", false, "disables running dry run to resources before applying them")
 	flagset.BoolVar(&params.ForceConflicts, "force-conflicts", false, "force apply changes on field manager conflicts")
 	flagset.BoolVar(&params.DiffOnly, "diff-only", false, "show diff between current revision and would be applied state. Does not apply anything to cluster")
+	flagset.BoolVar(&params.Color, "color", term.IsTerminal(int(os.Stdin.Fd())), "use colored output in diffs")
 	flagset.IntVar(&params.Context, "context", 4, "number of lines of context in diff (ignored if not using --diff-only)")
 	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
 	flagset.StringVar(&params.Flight.Namespace, "namespace", "default", "preferred namespace for resources if they do not define one")
@@ -152,7 +155,14 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 			return err
 		}
 
-		_, err = fmt.Fprint(internal.Stdout(ctx), text.DiffColorized(a, b, params.Context))
+		differ := func() text.DiffFunc {
+			if params.Color {
+				return text.DiffColorized
+			}
+			return text.Diff
+		}()
+
+		_, err = fmt.Fprint(internal.Stdout(ctx), differ(a, b, params.Context))
 		return err
 	}
 

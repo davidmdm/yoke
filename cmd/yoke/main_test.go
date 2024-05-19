@@ -182,6 +182,58 @@ func TestTakeoffWithNamespace(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestTakeoffDiffOnly(t *testing.T) {
+	settings := GlobalSettings{KubeConfigPath: home.Kubeconfig}
+
+	params := TakeoffParams{
+		Release:        "foo",
+		GlobalSettings: settings,
+		Flight: TakeoffFlightParams{
+			Input: strings.NewReader(`{
+				apiVersion: v1,
+				kind: ConfigMap,
+				metadata: {
+					name: test-diff,
+					namespace: default,
+				},
+				data: {
+					foo: bar,
+				},
+			}`),
+		},
+	}
+
+	require.NoError(t, TakeOff(context.Background(), params))
+	defer func() {
+		require.NoError(t, Mayday(context.Background(), MaydayParams{Release: "foo", GlobalSettings: settings}))
+	}()
+
+	var stdout bytes.Buffer
+	ctx := internal.WithStdout(context.Background(), &stdout)
+
+	params = TakeoffParams{
+		Release:        "foo",
+		GlobalSettings: settings,
+		DiffOnly:       true,
+		Flight: TakeoffFlightParams{
+			Input: strings.NewReader(`{
+				apiVersion: v1,
+				kind: ConfigMap,
+				metadata: {
+					name: test-diff,
+					namespace: default,
+				},
+				data: {
+					baz: boop,
+				},
+			}`),
+		},
+	}
+
+	require.NoError(t, TakeOff(ctx, params))
+	require.Equal(t, "--- current\n+++ next\n@@ -4 +4 @@\n-    foo: bar\n+    baz: boop\n", stdout.String())
+}
+
 func TestTurbulenceFix(t *testing.T) {
 	rest, err := clientcmd.BuildConfigFromFlags("", home.Kubeconfig)
 	require.NoError(t, err)
