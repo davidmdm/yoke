@@ -19,6 +19,7 @@ import (
 	"github.com/davidmdm/x/xerr"
 	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/yoke/internal/k8s"
+	"github.com/davidmdm/yoke/internal/text"
 	"github.com/davidmdm/yoke/internal/wasi"
 	"github.com/davidmdm/yoke/pkg/yoke"
 )
@@ -38,6 +39,8 @@ type TakeoffParams struct {
 	Release        string
 	Out            string
 	Flight         TakeoffFlightParams
+	DiffOnly       bool
+	Context        int
 }
 
 //go:embed cmd_takeoff_help.txt
@@ -65,6 +68,8 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 	flagset.BoolVar(&params.TestRun, "test-run", false, "test-run executes the underlying wasm and outputs it to stdout but does not apply any resources to the cluster")
 	flagset.BoolVar(&params.SkipDryRun, "skip-dry-run", false, "disables running dry run to resources before applying them")
 	flagset.BoolVar(&params.ForceConflicts, "force-conflicts", false, "force apply changes on field manager conflicts")
+	flagset.BoolVar(&params.DiffOnly, "diff-only", false, "show diff between current revision and would be applied state. Does not apply anything to cluster")
+	flagset.IntVar(&params.Context, "context", 4, "number of lines of context in diff (ignored if not using --diff-only)")
 	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
 	flagset.StringVar(&params.Flight.Namespace, "namespace", "default", "preferred namespace for resources if they do not define one")
 
@@ -128,6 +133,27 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 			return ExportToStdout(resources)
 		}
 		return ExportToFS(params.Out, params.Release, resources)
+	}
+
+	if params.DiffOnly {
+		revisions, err := kube.GetRevisions(ctx, params.Release)
+		if err != nil {
+			return fmt.Errorf("failed to get revision history: %w", err)
+		}
+		currentResources := revisions.CurrentResources()
+
+		a, err := text.ToYamlFile("current", currentResources)
+		if err != nil {
+			return err
+		}
+
+		b, err := text.ToYamlFile("next", resources)
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprint(os.Stdout, text.DiffColorized(a, b, params.Context))
+		return err
 	}
 
 	return client.Takeoff(ctx, yoke.TakeoffParams{
