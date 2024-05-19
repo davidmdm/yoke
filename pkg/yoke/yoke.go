@@ -189,10 +189,7 @@ func (client Client) Turbulence(ctx context.Context, params TurbulenceParams) er
 	}
 	resources := revisions.CurrentResources()
 
-	expected := make(map[string]*unstructured.Unstructured, len(resources))
-	for _, resource := range resources {
-		expected[internal.Canonical(resource)] = resource
-	}
+	expected := internal.CanonicalMap(resources)
 
 	actual := map[string]*unstructured.Unstructured{}
 	for name, resource := range expected {

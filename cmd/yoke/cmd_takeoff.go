@@ -142,12 +142,12 @@ func TakeOff(ctx context.Context, params TakeoffParams) error {
 		}
 		currentResources := revisions.CurrentResources()
 
-		a, err := text.ToYamlFile("current", currentResources)
+		a, err := text.ToYamlFile("current", internal.CanonicalObjectMap(currentResources))
 		if err != nil {
 			return err
 		}
 
-		b, err := text.ToYamlFile("next", resources)
+		b, err := text.ToYamlFile("next", internal.CanonicalObjectMap(resources))
 		if err != nil {
 			return err
 		}

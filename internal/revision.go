@@ -104,3 +104,19 @@ func CanonicalNameList(resources []*unstructured.Unstructured) []string {
 	}
 	return result
 }
+
+func CanonicalMap(resources []*unstructured.Unstructured) map[string]*unstructured.Unstructured {
+	result := make(map[string]*unstructured.Unstructured, len(resources))
+	for _, resource := range resources {
+		result[Canonical(resource)] = resource
+	}
+	return result
+}
+
+func CanonicalObjectMap(resources []*unstructured.Unstructured) map[string]any {
+	result := make(map[string]any, len(resources))
+	for _, resource := range resources {
+		result[Canonical(resource)] = resource.Object
+	}
+	return result
+}

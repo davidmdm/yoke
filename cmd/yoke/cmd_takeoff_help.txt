@@ -28,4 +28,7 @@
   # deploy resources from a unix pipe
   generate-resources.sh | yoke takeoff my-releae
 
+  # view the diff with the diff of the desired release against current release state
+  yoke takeoff -diff-only my-release main.wasm
+
 !cyan Flags:
