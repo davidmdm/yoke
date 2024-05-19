@@ -180,6 +180,6 @@ func Blackbox(ctx context.Context, params BlackboxParams) error {
 		return err
 	}
 
-	_, err = fmt.Fprint(os.Stdout, text.DiffColorized(a, b, params.Context))
+	_, err = fmt.Fprint(internal.Stdout(ctx), text.DiffColorized(a, b, params.Context))
 	return err
 }

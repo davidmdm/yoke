@@ -3,7 +3,6 @@ package yoke
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -214,7 +213,7 @@ func (client Client) Turbulence(ctx context.Context, params TurbulenceParams) er
 			if err := client.k8s.ApplyResource(ctx, desired, forceConflicts); err != nil {
 				errs = append(errs, fmt.Errorf("%s: %w", name, err))
 			}
-			fmt.Fprintf(os.Stderr, "fixed drift for: %s\n", name)
+			fmt.Fprintf(internal.Stderr(ctx), "fixed drift for: %s\n", name)
 		}
 
 		return xerr.MultiErrOrderedFrom("failed to apply desired state to drift", errs...)
@@ -243,7 +242,7 @@ func (client Client) Turbulence(ctx context.Context, params TurbulenceParams) er
 		return internal.Warning("no turbulence detected")
 	}
 
-	_, err = fmt.Fprint(os.Stdout, diff)
+	_, err = fmt.Fprint(internal.Stdout(ctx), diff)
 	return err
 }
 

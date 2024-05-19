@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/yoke/internal/home"
 	"github.com/davidmdm/yoke/internal/k8s"
 )
@@ -229,7 +230,10 @@ func TestTurbulenceFix(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "corrupt", configmap.Data["key"])
 
-	require.NoError(t, Turbulence(context.Background(), TurbulenceParams{GlobalSettings: settings, Release: "foo", Fix: true}))
+	var stderr bytes.Buffer
+	ctx := internal.WithStderr(context.Background(), &stderr)
+	require.NoError(t, Turbulence(ctx, TurbulenceParams{GlobalSettings: settings, Release: "foo", Fix: true}))
+	require.Equal(t, "fixed drift for: default.core.v1.configmap.test\n", stderr.String())
 
 	configmap, err = client.CoreV1().ConfigMaps("default").Get(context.Background(), "test", metav1.GetOptions{})
 	require.NoError(t, err)
