@@ -94,6 +94,8 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 }
 
 func TakeOff(ctx context.Context, params TakeoffParams) error {
+	defer internal.DebugTimer(ctx, "command")()
+
 	output, wasm, err := EvalFlight(ctx, params.Release, params.Flight)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate flight: %w", err)

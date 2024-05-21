@@ -1,9 +1,12 @@
 package k8s
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime"
+	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,6 +48,8 @@ func NewClientFromKubeConfig(path string) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to build k8 config: %w", err)
 	}
+	restcfg.Burst = cmp.Or(restcfg.Burst, 300)
+	restcfg.QPS = cmp.Or(restcfg.QPS, 50)
 	return NewClient(restcfg)
 }
 
@@ -74,26 +79,43 @@ type ApplyResourcesOpts struct {
 func (client Client) ApplyResources(ctx context.Context, resources []*unstructured.Unstructured, opts ApplyResourcesOpts) error {
 	defer internal.DebugTimer(ctx, "apply resources")()
 
-	var errs []error
-
 	if !opts.SkipDryRun {
-		for _, resource := range resources {
-			if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: true}); err != nil {
-				errs = append(errs, fmt.Errorf("%s: %w", internal.Canonical(resource), err))
-			}
-		}
-		if err := xerr.MultiErrOrderedFrom("dry run", errs...); err != nil {
+		dryOpts := ApplyOpts{DryRun: true}
+		if err := xerr.MultiErrOrderedFrom("dry run", client.applyMany(ctx, resources, dryOpts)...); err != nil {
 			return err
 		}
 	}
 
-	for _, resource := range resources {
-		if err := client.ApplyResource(ctx, resource, ApplyOpts{DryRun: false, ForceConflicts: opts.ForceConflicts}); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", internal.Canonical(resource), err))
-		}
+	applyOpts := ApplyOpts{DryRun: false, ForceConflicts: opts.ForceConflicts}
+
+	return xerr.MultiErrOrderedFrom("", client.applyMany(ctx, resources, applyOpts)...)
+}
+
+func (client Client) applyMany(ctx context.Context, resources []*unstructured.Unstructured, opts ApplyOpts) []error {
+	var wg sync.WaitGroup
+	wg.Add(len(resources))
+
+	errs := make([]error, len(resources))
+	semaphore := make(chan struct{}, runtime.NumCPU())
+
+	for i, resource := range resources {
+		go func() {
+			defer wg.Done()
+
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			err := client.ApplyResource(ctx, resource, opts)
+			if err != nil {
+				err = fmt.Errorf("%s: %w", internal.Canonical(resource), err)
+			}
+			errs[i] = err
+		}()
 	}
 
-	return xerr.MultiErrOrderedFrom("", errs...)
+	wg.Wait()
+
+	return errs
 }
 
 type ApplyOpts struct {
