@@ -52,7 +52,7 @@ func GetTurbulenceParams(settings GlobalSettings, args []string) (*TurbulencePar
 			"such as server generated annotations, status, defaults and more",
 	)
 	flagset.BoolVar(&params.Fix, "fix", false, "fix the drift. If present conflict-only will be true.")
-	flagset.BoolVar(&params.Color, "color", term.IsTerminal(int(os.Stdin.Fd())), "outputs diff with color")
+	flagset.BoolVar(&params.Color, "color", term.IsTerminal(int(os.Stdout.Fd())), "outputs diff with color")
 
 	flagset.Parse(args)
 
