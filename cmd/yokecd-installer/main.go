@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"slices"
-	"strings"
 
 	"golang.org/x/term"
 	appsv1 "k8s.io/api/apps/v1"
@@ -136,15 +135,7 @@ func run() error {
 		}
 	})
 
-	var finalResources []*unstructured.Unstructured
-	for _, resource := range resources {
-		if strings.HasSuffix(resource.GetName(), "-test") {
-			continue
-		}
-		finalResources = append(finalResources, resource)
-	}
-
-	return json.NewEncoder(os.Stdout).Encode(finalResources)
+	return json.NewEncoder(os.Stdout).Encode(resources)
 }
 
 func ptr[T any](value T) *T { return &value }

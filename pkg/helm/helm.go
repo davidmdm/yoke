@@ -139,7 +139,9 @@ func (chart Chart) Render(release, namespace string, values any) ([]*unstructure
 		if ext := path.Ext(name); ext != ".yaml" {
 			continue
 		}
-
+		if strings.HasPrefix(name, "tests/") || strings.Contains(name, "/tests/") {
+			continue
+		}
 		var resource unstructured.Unstructured
 		if err := yaml.Unmarshal([]byte(content), &resource); err != nil {
 			return nil, fmt.Errorf("%s: %w\n%s", name, err, content)
