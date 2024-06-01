@@ -13,85 +13,20 @@ import (
 	"github.com/davidmdm/yoke/internal/text"
 )
 
-type Client struct {
+type Commander struct {
 	k8s *k8s.Client
 }
 
-func FromKubeConfig(path string) (*Client, error) {
+func FromKubeConfig(path string) (*Commander, error) {
 	client, err := k8s.NewClientFromKubeConfig(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize k8s client: %w", err)
 	}
-	return &Client{client}, nil
+	return &Commander{client}, nil
 }
 
-func FromK8Client(client *k8s.Client) *Client {
-	return &Client{client}
-}
-
-type TakeoffParams struct {
-	Release        string
-	Resources      []*unstructured.Unstructured
-	FlightID       string
-	Namespace      string
-	Wasm           []byte
-	SkipDryRun     bool
-	ForceConflicts bool
-}
-
-func (client Client) Takeoff(ctx context.Context, params TakeoffParams) error {
-	defer internal.DebugTimer(ctx, "takeoff")()
-
-	revisions, err := client.k8s.GetRevisions(ctx, params.Release)
-	if err != nil {
-		return fmt.Errorf("failed to get revision history: %w", err)
-	}
-
-	previous := revisions.CurrentResources()
-
-	if reflect.DeepEqual(previous, params.Resources) {
-		return internal.Warning("resources are the same as previous revision: skipping takeoff")
-	}
-
-	if err := client.k8s.ValidateOwnership(ctx, params.Release, params.Resources); err != nil {
-		return fmt.Errorf("failed to validate ownership: %w", err)
-	}
-
-	if params.Namespace != "" {
-		if err := client.k8s.EnsureNamespace(ctx, params.Namespace); err != nil {
-			return fmt.Errorf("failed to ensure namespace: %w", err)
-		}
-	}
-
-	applyOpts := k8s.ApplyResourcesOpts{
-		SkipDryRun:     params.SkipDryRun,
-		ForceConflicts: params.ForceConflicts,
-	}
-	if err := client.k8s.ApplyResources(ctx, params.Resources, applyOpts); err != nil {
-		return fmt.Errorf("failed to apply resources: %w", err)
-	}
-
-	revisions.Add(params.Resources, params.FlightID, params.Wasm)
-
-	if err := client.k8s.UpsertRevisions(ctx, params.Release, revisions); err != nil {
-		return fmt.Errorf("failed to create revision: %w", err)
-	}
-
-	removed, err := client.k8s.RemoveOrphans(ctx, previous, params.Resources)
-	if err != nil {
-		return fmt.Errorf("failed to remove orhpans: %w", err)
-	}
-
-	var (
-		createdNames = internal.CanonicalNameList(params.Resources)
-		removedNames = internal.CanonicalNameList(removed)
-	)
-
-	if err := client.k8s.UpdateResourceReleaseMapping(ctx, params.Release, createdNames, removedNames); err != nil {
-		return fmt.Errorf("failed to update resource release mapping: %w", err)
-	}
-
-	return nil
+func FromK8Client(client *k8s.Client) *Commander {
+	return &Commander{client}
 }
 
 type DescentParams struct {
@@ -99,8 +34,8 @@ type DescentParams struct {
 	RevisionID int
 }
 
-func (client Client) Descent(ctx context.Context, params DescentParams) error {
-	revisions, err := client.k8s.GetRevisions(ctx, params.Release)
+func (commander Commander) Descent(ctx context.Context, params DescentParams) error {
+	revisions, err := commander.k8s.GetRevisions(ctx, params.Release)
 	if err != nil {
 		return fmt.Errorf("failed to get revisions: %w", err)
 	}
@@ -118,23 +53,23 @@ func (client Client) Descent(ctx context.Context, params DescentParams) error {
 		return fmt.Errorf("revision %d is not within history", params.RevisionID)
 	}
 
-	if err := client.k8s.ValidateOwnership(ctx, params.Release, next.Resources); err != nil {
+	if err := commander.k8s.ValidateOwnership(ctx, params.Release, next.Resources); err != nil {
 		return fmt.Errorf("failed to validate ownership: %w", err)
 	}
 
 	previous := revisions.CurrentResources()
 
-	if err := client.k8s.ApplyResources(ctx, next.Resources, k8s.ApplyResourcesOpts{SkipDryRun: true}); err != nil {
+	if err := commander.k8s.ApplyResources(ctx, next.Resources, k8s.ApplyResourcesOpts{SkipDryRun: true}); err != nil {
 		return fmt.Errorf("failed to apply resources: %w", err)
 	}
 
 	revisions.ActiveIndex = index
 
-	if err := client.k8s.UpsertRevisions(ctx, params.Release, revisions); err != nil {
+	if err := commander.k8s.UpsertRevisions(ctx, params.Release, revisions); err != nil {
 		return fmt.Errorf("failed to update revision history: %w", err)
 	}
 
-	removed, err := client.k8s.RemoveOrphans(ctx, previous, next.Resources)
+	removed, err := commander.k8s.RemoveOrphans(ctx, previous, next.Resources)
 	if err != nil {
 		return fmt.Errorf("failed to remove orphaned resources: %w", err)
 	}
@@ -144,14 +79,14 @@ func (client Client) Descent(ctx context.Context, params DescentParams) error {
 		removedNames = internal.CanonicalNameList(removed)
 	)
 
-	if err := client.k8s.UpdateResourceReleaseMapping(ctx, params.Release, createdNames, removedNames); err != nil {
+	if err := commander.k8s.UpdateResourceReleaseMapping(ctx, params.Release, createdNames, removedNames); err != nil {
 		return fmt.Errorf("failed to update resource release mapping: %w", err)
 	}
 
 	return nil
 }
 
-func (client Client) Mayday(ctx context.Context, release string) error {
+func (client Commander) Mayday(ctx context.Context, release string) error {
 	revisions, err := client.k8s.GetRevisions(ctx, release)
 	if err != nil {
 		return fmt.Errorf("failed to get revision history for release: %w", err)
@@ -181,8 +116,8 @@ type TurbulenceParams struct {
 	Color         bool
 }
 
-func (client Client) Turbulence(ctx context.Context, params TurbulenceParams) error {
-	revisions, err := client.k8s.GetRevisions(ctx, params.Release)
+func (commander Commander) Turbulence(ctx context.Context, params TurbulenceParams) error {
+	revisions, err := commander.k8s.GetRevisions(ctx, params.Release)
 	if err != nil {
 		return fmt.Errorf("failed to get revisions for release %s: %w", params.Release, err)
 	}
@@ -192,7 +127,7 @@ func (client Client) Turbulence(ctx context.Context, params TurbulenceParams) er
 
 	actual := map[string]*unstructured.Unstructured{}
 	for name, resource := range expected {
-		value, err := client.k8s.GetInClusterState(ctx, resource)
+		value, err := commander.k8s.GetInClusterState(ctx, resource)
 		if err != nil {
 			return fmt.Errorf("failed to get in cluster state for resource %s: %w", internal.Canonical(resource), err)
 		}
@@ -210,7 +145,7 @@ func (client Client) Turbulence(ctx context.Context, params TurbulenceParams) er
 			if reflect.DeepEqual(desired, actual[name]) {
 				continue
 			}
-			if err := client.k8s.ApplyResource(ctx, desired, forceConflicts); err != nil {
+			if err := commander.k8s.ApplyResource(ctx, desired, forceConflicts); err != nil {
 				errs = append(errs, fmt.Errorf("%s: %w", name, err))
 			}
 			fmt.Fprintf(internal.Stderr(ctx), "fixed drift for: %s\n", name)
