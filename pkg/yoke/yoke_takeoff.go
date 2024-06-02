@@ -137,11 +137,13 @@ func (commander Commander) Takeoff(ctx context.Context, params TakeoffParams) er
 		return fmt.Errorf("failed to validate ownership: %w", err)
 	}
 
-	if targetNS := params.Flight.Namespace; targetNS != "" {
-		if err := commander.k8s.EnsureNamespace(ctx, targetNS); err != nil {
+	if namespace := params.Flight.Namespace; namespace != "" {
+		if err := commander.k8s.EnsureNamespace(ctx, namespace); err != nil {
 			return fmt.Errorf("failed to ensure namespace: %w", err)
 		}
-		// TODO: wait for namespace ready
+		if err := commander.k8s.WaitForReady(ctx, toUnstructuredNS(namespace)); err != nil {
+			return fmt.Errorf("failed to wait for namespace %s to be ready: %w", namespace, err)
+		}
 	}
 
 	applyOpts := k8s.ApplyResourcesOpts{
@@ -303,4 +305,14 @@ func EvalFlight(ctx context.Context, release string, flight FlightParams) ([]byt
 	}
 
 	return output, wasm, nil
+}
+
+func toUnstructuredNS(ns string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": "v1",
+			"kind":       "Namespace",
+			"metadata":   map[string]any{"name": ns},
+		},
+	}
 }
