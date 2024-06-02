@@ -174,6 +174,8 @@ func (client Client) ApplyResource(ctx context.Context, resource *unstructured.U
 }
 
 func (client Client) RemoveOrphans(ctx context.Context, previous, current []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+	defer internal.DebugTimer(ctx, "remove orphaned resources")()
+
 	set := make(map[string]struct{})
 	for _, resource := range current {
 		set[internal.Canonical(resource)] = struct{}{}
@@ -182,28 +184,35 @@ func (client Client) RemoveOrphans(ctx context.Context, previous, current []*uns
 	var errs []error
 	var removedResources []*unstructured.Unstructured
 	for _, resource := range previous {
-		if _, ok := set[internal.Canonical(resource)]; ok {
-			continue
-		}
+		func() {
+			name := internal.Canonical(resource)
 
-		resourceInterface, err := client.GetDynamicResourceInterface(resource)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to resolve resource %s: %w", internal.Canonical(resource), err))
-			continue
-		}
+			if _, ok := set[name]; ok {
+				return
+			}
 
-		if err := resourceInterface.Delete(ctx, resource.GetName(), metav1.DeleteOptions{}); err != nil {
-			errs = append(errs, fmt.Errorf("failed to delete %s: %w", internal.Canonical(resource), err))
-			continue
-		}
+			defer internal.DebugTimer(ctx, "delete resource "+name)()
 
-		removedResources = append(removedResources, resource)
+			resourceInterface, err := client.GetDynamicResourceInterface(resource)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to resolve resource %s: %w", name, err))
+				return
+			}
+
+			if err := resourceInterface.Delete(ctx, resource.GetName(), metav1.DeleteOptions{}); err != nil {
+				errs = append(errs, fmt.Errorf("failed to delete %s: %w", name, err))
+				return
+			}
+
+			removedResources = append(removedResources, resource)
+		}()
 	}
 
 	return removedResources, xerr.MultiErrOrderedFrom("", errs...)
 }
 
 func (client Client) GetRevisions(ctx context.Context, release string) (*internal.Revisions, error) {
+	defer internal.DebugTimer(ctx, "get revisions for "+release)
 	name := releaseName(release)
 
 	secret, err := client.clientset.CoreV1().Secrets(NSKubeSystem).Get(ctx, name, metav1.GetOptions{})
@@ -287,6 +296,8 @@ func (client *Client) LookupResourceMapping(resource *unstructured.Unstructured)
 }
 
 func (client Client) UpdateResourceReleaseMapping(ctx context.Context, release string, create, remove []string) error {
+	defer internal.DebugTimer(ctx, "update resource to release mapping")()
+
 	configMaps := client.clientset.CoreV1().ConfigMaps(NSKubeSystem)
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -387,6 +398,7 @@ func (client Client) GetAllRevisions(ctx context.Context) ([]internal.Revisions,
 }
 
 func (client Client) DeleteRevisions(ctx context.Context, release string) error {
+	defer internal.DebugTimer(ctx, "delete revision history "+release)()
 	return client.clientset.CoreV1().
 		Secrets(NSKubeSystem).
 		Delete(ctx, releaseName(release), metav1.DeleteOptions{})
@@ -413,6 +425,8 @@ func (client Client) EnsureNamespace(ctx context.Context, namespace string) erro
 }
 
 func (client Client) GetInClusterState(ctx context.Context, resource *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	defer internal.DebugTimer(ctx, "get in-cluster state for "+internal.Canonical(resource))()
+
 	resourceInterface, err := client.GetDynamicResourceInterface(resource)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dynamic resource interface: %w", err)

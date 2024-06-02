@@ -35,9 +35,14 @@ type DescentParams struct {
 }
 
 func (commander Commander) Descent(ctx context.Context, params DescentParams) error {
+	defer internal.DebugTimer(ctx, "descent")()
+
 	revisions, err := commander.k8s.GetRevisions(ctx, params.Release)
 	if err != nil {
 		return fmt.Errorf("failed to get revisions: %w", err)
+	}
+	if revisions.History == nil {
+		return fmt.Errorf("release %s not found", params.Release)
 	}
 
 	index, next := func() (int, *internal.Revision) {
@@ -87,6 +92,8 @@ func (commander Commander) Descent(ctx context.Context, params DescentParams) er
 }
 
 func (client Commander) Mayday(ctx context.Context, release string) error {
+	defer internal.DebugTimer(ctx, "mayday")()
+
 	revisions, err := client.k8s.GetRevisions(ctx, release)
 	if err != nil {
 		return fmt.Errorf("failed to get revision history for release: %w", err)
@@ -117,9 +124,14 @@ type TurbulenceParams struct {
 }
 
 func (commander Commander) Turbulence(ctx context.Context, params TurbulenceParams) error {
+	defer internal.DebugTimer(ctx, "turbulence")()
+
 	revisions, err := commander.k8s.GetRevisions(ctx, params.Release)
 	if err != nil {
 		return fmt.Errorf("failed to get revisions for release %s: %w", params.Release, err)
+	}
+	if revisions.History == nil {
+		return fmt.Errorf("release %s not found", params.Release)
 	}
 	resources := revisions.CurrentResources()
 
