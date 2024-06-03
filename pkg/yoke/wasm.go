@@ -15,6 +15,7 @@ import (
 
 	"github.com/davidmdm/x/xerr"
 	"github.com/davidmdm/yoke/internal"
+	"github.com/davidmdm/yoke/internal/wasi"
 )
 
 func LoadWasm(ctx context.Context, path string) (wasm []byte, err error) {
@@ -88,4 +89,33 @@ func gzipReader(r io.Reader) io.Reader {
 	}()
 
 	return pr
+}
+
+func EvalFlight(ctx context.Context, release string, flight FlightParams) ([]byte, []byte, error) {
+	if flight.Input != nil && flight.Path == "" {
+		output, err := io.ReadAll(flight.Input)
+		return output, nil, err
+	}
+
+	wasm, err := LoadWasm(ctx, flight.Path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read wasm program: %w", err)
+	}
+
+	output, err := wasi.Execute(ctx, wasi.ExecParams{
+		Wasm:    wasm,
+		Release: release,
+		Stdin:   flight.Input,
+		Args:    flight.Args,
+		Env: map[string]string{
+			"YOKE_RELEASE":   release,
+			"YOKE_NAMESPACE": flight.Namespace,
+			"NAMESPACE":      flight.Namespace,
+		},
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to execute wasm: %w", err)
+	}
+
+	return output, wasm, nil
 }

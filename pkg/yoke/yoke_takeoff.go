@@ -19,7 +19,6 @@ import (
 	"github.com/davidmdm/yoke/internal"
 	"github.com/davidmdm/yoke/internal/k8s"
 	"github.com/davidmdm/yoke/internal/text"
-	"github.com/davidmdm/yoke/internal/wasi"
 )
 
 type FlightParams struct {
@@ -276,35 +275,6 @@ func ExportToStdout(ctx context.Context, resources []*unstructured.Unstructured)
 	encoder := yaml.NewEncoder(internal.Stdout(ctx))
 	encoder.SetIndent(2)
 	return encoder.Encode(output)
-}
-
-func EvalFlight(ctx context.Context, release string, flight FlightParams) ([]byte, []byte, error) {
-	if flight.Input != nil && flight.Path == "" {
-		output, err := io.ReadAll(flight.Input)
-		return output, nil, err
-	}
-
-	wasm, err := LoadWasm(ctx, flight.Path)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read wasm program: %w", err)
-	}
-
-	output, err := wasi.Execute(ctx, wasi.ExecParams{
-		Wasm:    wasm,
-		Release: release,
-		Stdin:   flight.Input,
-		Args:    flight.Args,
-		Env: map[string]string{
-			"YOKE_RELEASE":   release,
-			"YOKE_NAMESPACE": flight.Namespace,
-			"NAMESPACE":      flight.Namespace,
-		},
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to execute wasm: %w", err)
-	}
-
-	return output, wasm, nil
 }
 
 func toUnstructuredNS(ns string) *unstructured.Unstructured {
