@@ -32,14 +32,7 @@ type Values struct {
 }
 
 func run() error {
-	values := Values{
-		Version: "latest",
-		ArgoCD: map[string]any{
-			"redis-ha": map[string]any{
-				"enabled": false,
-			},
-		},
-	}
+	values := Values{Version: "latest"}
 
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		if err := yaml.NewYAMLToJSONDecoder(os.Stdin).Decode(&values); err != nil && err != io.EOF {

@@ -123,6 +123,8 @@ func (chart Chart) Render(release, namespace string, values any) ([]*unstructure
 		return nil, fmt.Errorf("failed to convert values to map: %w", err)
 	}
 
+	chartutil.ProcessDependencies(chart.Chart, valueMap)
+
 	valueMap, err = chartutil.ToRenderValues(chart.Chart, valueMap, opts, capabilities)
 	if err != nil {
 		return nil, err
