@@ -33,7 +33,7 @@ func FromK8Client(client *k8s.Client) *Commander {
 type DescentParams struct {
 	Release    string
 	RevisionID int
-  Wait time.Duration
+	Wait       time.Duration
 }
 
 func (commander Commander) Descent(ctx context.Context, params DescentParams) error {
@@ -90,11 +90,11 @@ func (commander Commander) Descent(ctx context.Context, params DescentParams) er
 		return fmt.Errorf("failed to update resource release mapping: %w", err)
 	}
 
-  if params.Wait > 0 {
-    if err := commander.k8s.WaitForReadyMany(ctx, next.Resources, k8s.WaitOptions{Timeout: params.Wait}); err != nil {
-      return fmt.Errorf("release did not become ready within wait period: %w", err)
-    }
-  }
+	if params.Wait > 0 {
+		if err := commander.k8s.WaitForReadyMany(ctx, next.Resources, k8s.WaitOptions{Timeout: params.Wait}); err != nil {
+			return fmt.Errorf("release did not become ready within wait period: %w", err)
+		}
+	}
 
 	return nil
 }

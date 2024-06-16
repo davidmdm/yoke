@@ -16,6 +16,12 @@ tasks:
       - kind delete cluster --name=tests && kind create cluster --name=tests
       - go test -coverprofile cover.out -p 1 -v ./...
 
+  update-deps:
+    cmds:
+      - go get -u ./...
+      - go get github.com/tetratelabs/wazero@v1.6.0
+      - go mod tidy
+
   wasm:
     cmds:
       - task: kube
