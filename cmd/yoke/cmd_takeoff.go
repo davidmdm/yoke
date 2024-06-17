@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/term"
 
@@ -64,6 +65,7 @@ func GetTakeoffParams(settings GlobalSettings, source io.Reader, args []string) 
 	flagset.StringVar(&params.Out, "out", "", "if present outputs flight resources to directory specified, if out is - outputs to standard out")
 	flagset.StringVar(&params.Flight.Namespace, "namespace", "default", "preferred namespace for resources if they do not define one")
 	flagset.DurationVar(&params.Wait, "wait", 0, "time to wait for release to be ready")
+	flagset.DurationVar(&params.Poll, "poll", 5*time.Second, "interval to poll resource state at. Used with --wait")
 
 	args, params.Flight.Args = internal.CutArgs(args)
 

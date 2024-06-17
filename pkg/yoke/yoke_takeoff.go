@@ -42,6 +42,7 @@ type TakeoffParams struct {
 	CreateNamespaces bool
 	CreateCRDs       bool
 	Wait             time.Duration
+	Poll             time.Duration
 }
 
 func (commander Commander) Takeoff(ctx context.Context, params TakeoffParams) error {
@@ -142,7 +143,7 @@ func (commander Commander) Takeoff(ctx context.Context, params TakeoffParams) er
 		if err := commander.k8s.EnsureNamespace(ctx, namespace); err != nil {
 			return fmt.Errorf("failed to ensure namespace: %w", err)
 		}
-		if err := commander.k8s.WaitForReady(ctx, toUnstructuredNS(namespace), k8s.WaitOptions{}); err != nil {
+		if err := commander.k8s.WaitForReady(ctx, toUnstructuredNS(namespace), k8s.WaitOptions{Interval: params.Poll}); err != nil {
 			return fmt.Errorf("failed to wait for namespace %s to be ready: %w", namespace, err)
 		}
 	}
@@ -177,7 +178,7 @@ func (commander Commander) Takeoff(ctx context.Context, params TakeoffParams) er
 	}
 
 	if params.Wait > 0 {
-		if err := commander.k8s.WaitForReadyMany(ctx, resources, k8s.WaitOptions{Timeout: params.Wait}); err != nil {
+		if err := commander.k8s.WaitForReadyMany(ctx, resources, k8s.WaitOptions{Timeout: params.Wait, Interval: params.Poll}); err != nil {
 			return fmt.Errorf("release did not become ready within wait period: to rollback use `yoke descent`: %w", err)
 		}
 	}

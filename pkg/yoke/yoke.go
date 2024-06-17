@@ -34,6 +34,7 @@ type DescentParams struct {
 	Release    string
 	RevisionID int
 	Wait       time.Duration
+	Poll       time.Duration
 }
 
 func (commander Commander) Descent(ctx context.Context, params DescentParams) error {
@@ -91,7 +92,7 @@ func (commander Commander) Descent(ctx context.Context, params DescentParams) er
 	}
 
 	if params.Wait > 0 {
-		if err := commander.k8s.WaitForReadyMany(ctx, next.Resources, k8s.WaitOptions{Timeout: params.Wait}); err != nil {
+		if err := commander.k8s.WaitForReadyMany(ctx, next.Resources, k8s.WaitOptions{Timeout: params.Wait, Interval: params.Poll}); err != nil {
 			return fmt.Errorf("release did not become ready within wait period: %w", err)
 		}
 	}
