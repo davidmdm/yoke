@@ -36,7 +36,15 @@ func run() error {
 	tags := map[string]string{}
 
 	iter.ForEach(func(r *plumbing.Reference) error {
-		tags[r.Hash().String()] = strings.TrimPrefix(r.Name().String(), "refs/tags/")
+		hash := r.Hash().String()
+		current := strings.TrimPrefix(r.Name().String(), "refs/tags/")
+
+		if previous := tags[hash]; previous != "" {
+			tags[hash] = previous + " " + current
+			return nil
+		}
+
+		tags[hash] = current
 		return nil
 	})
 

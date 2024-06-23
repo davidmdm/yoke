@@ -24,7 +24,7 @@
 
 * deps: update project dependencies ([2785be6](https://github.com/davidmdm/yoke/commit/2785be63452ff98263ebca85dd74c1bc07bdecee))
 
-## yokecd-installer/v0.0.5
+## v0.0.9 yokecd-installer/v0.0.5
 
 * pkg/helm: support subchart dependencies ([969e592](https://github.com/davidmdm/yoke/commit/969e592ef4b8555b30c84f380b0d4a362a05620c))
 * cmd/takeoff: test --wait option ([14f3c67](https://github.com/davidmdm/yoke/commit/14f3c670f5508724f475e938d0db6f2d8e1fcd0d))
@@ -98,7 +98,7 @@
 * yoke: improve takeoff help text ([b74f17d](https://github.com/davidmdm/yoke/commit/b74f17d1599a6cb7ce49b202145fed3663a5dad7))
 * yoke: add wazero to version output ([af90ae6](https://github.com/davidmdm/yoke/commit/af90ae6624b7687982f8f74f0ee890cc87e9ee41))
 
-## yokecd-installer/v0.0.1
+## v0.0.1 yokecd-installer/v0.0.1
 
 * releaser: release patch versions from now on ([eac2db4](https://github.com/davidmdm/yoke/commit/eac2db4c409ab28039c4cddc86c1c4a96f380553))
 * update dependencies ([44a6dd7](https://github.com/davidmdm/yoke/commit/44a6dd79af61344d345804feb894a843eedb6653))
