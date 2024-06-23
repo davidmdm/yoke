@@ -4,27 +4,27 @@
 > This project has not reached v1.0.0 and as such provides no backwards compatibility guarantees between versions.
 > Pre v1.0.0 minor bumps will repesent breaking changes.
 
-## v0.1.0
+## v0.1.0 (2024-06-22)
 
 > [!CAUTION]
 > This version contains breaking changes, and is not expected to be compatible with previous versions
 
 * yoke: breaking change: represent revision history as multiple secrets ([cde0d83](https://github.com/davidmdm/yoke/commit/cde0d832f855f26ea51e6385677fdbd5f2d92e41))
 
-## v0.0.11
+## v0.0.11 (2024-06-17)
 
 * yoke/takeoff: switch default to true for --create-crds flag ([4ffe721](https://github.com/davidmdm/yoke/commit/4ffe7218468e2b3a5897af5c2bfd42eca9439de9))
 * cmd: added --poll flag to set poll interval for resource readiness during takeoff and descent ([63a6437](https://github.com/davidmdm/yoke/commit/63a64376c8ac32f564144eb9ece290fa9d992e6c))
 
-## yokecd-installer/v0.0.6
+## yokecd-installer/v0.0.6 (2024-06-16)
 
 * yokecd-installer: bump argocd chart to version 7.1.3 ([ea662ae](https://github.com/davidmdm/yoke/commit/ea662ae7dbd55b3ac6605bbd325578151d265588))
 
-## v0.0.10
+## v0.0.10 (2024-06-15)
 
 * deps: update project dependencies ([2785be6](https://github.com/davidmdm/yoke/commit/2785be63452ff98263ebca85dd74c1bc07bdecee))
 
-## v0.0.9 yokecd-installer/v0.0.5
+## v0.0.9 (2024-06-15) - yokecd-installer/v0.0.5 (2024-06-15)
 
 * pkg/helm: support subchart dependencies ([969e592](https://github.com/davidmdm/yoke/commit/969e592ef4b8555b30c84f380b0d4a362a05620c))
 * cmd/takeoff: test --wait option ([14f3c67](https://github.com/davidmdm/yoke/commit/14f3c670f5508724f475e938d0db6f2d8e1fcd0d))
@@ -35,25 +35,25 @@
 * yoke/debug: add debug timers to descent, mayday, and turbulence commands ([f377a27](https://github.com/davidmdm/yoke/commit/f377a27580d3ead62bb19504adaba348bc11c09c))
 * yoke/takeoff: wait for namespace created by -namespace to be ready ([178bf8d](https://github.com/davidmdm/yoke/commit/178bf8d3e1c37d4d310c7baba0ab2a71890a8821))
 
-## v0.0.8
+## v0.0.8 (2024-06-01)
 
 * pkg/yoke: set release in env of flight; update pkg/flight accordingly ([488985e](https://github.com/davidmdm/yoke/commit/488985e3aa36c7a579a5c220ddb30c17e754063d))
 
-## v0.0.7
+## v0.0.7 (2024-06-01)
 
 * cmd/yoke: add create namespace and crd logic to takeoff (#20)
 
 * cmd/yoke: add create namespace and crd logic to takeoff
 * pkg/yoke: refactor move all takeoff command logic into commander.Takeoff ([5aebdcc](https://github.com/davidmdm/yoke/commit/5aebdccb99ccf63a595052b269598756c4d83faf))
 
-## yokecd-installer/v0.0.4
+## yokecd-installer/v0.0.4 (2024-05-29)
 
 * pkg/helm: do not render test files ([df2329f](https://github.com/davidmdm/yoke/commit/df2329f7beb24366097c2a7547225304ebd766bf))
 * yoke: use stdout to determine color defaults for takeoff and turbulence ([164c7b7](https://github.com/davidmdm/yoke/commit/164c7b79e06496092fb7b0d9114ef363910d3f38))
 * yoke: concurrently apply resources during takeoff ([50cad15](https://github.com/davidmdm/yoke/commit/50cad159a12dee79d2461b10455bf3828151ffe4))
 * yoke: rename global -verbose flag to -debug ([a9a803c](https://github.com/davidmdm/yoke/commit/a9a803c4d3dbb61250ea73b852dec6aeb6d6075a))
 
-## v0.0.6
+## v0.0.6 (2024-05-19)
 
 * yoke: add takeoff diff-only tests ([824d4fb](https://github.com/davidmdm/yoke/commit/824d4fb75c4c6040695a1c4a5c414ead59ffb9f7))
 * refactor: stdio, consolidate use of canonical object map ([f5e2dff](https://github.com/davidmdm/yoke/commit/f5e2dff4e09528d5c7f70f11b0d53ea72fecc950))
@@ -63,17 +63,17 @@
 * yoke: use canonical object map for takeoff diffs ([7a9f0ff](https://github.com/davidmdm/yoke/commit/7a9f0ffbc8d069be395cc1f88293e13796135d64))
 * Added --diff-only to takeoff command (#17) ([e4c8a25](https://github.com/davidmdm/yoke/commit/e4c8a258e8d99cea04c9842fae6e51e30e042307))
 
-## v0.0.5
+## v0.0.5 (2024-05-18)
 
 * yoke: drift detection ([3ab27a7](https://github.com/davidmdm/yoke/commit/3ab27a7610ab869830807bbe17cd51895e8f8a6b))
 * yoke: add drift detection ([3e1e2a9](https://github.com/davidmdm/yoke/commit/3e1e2a98fbce95f5435e6e6f3fe1dbfd7bd87d22))
 * readme: add link to official documentation ([bdf3565](https://github.com/davidmdm/yoke/commit/bdf3565f8e89abb6745fe5c2a1ffa6a2d14d1217))
 
-## yokecd-installer/v0.0.3
+## yokecd-installer/v0.0.3 (2024-05-04)
 
 * yokecd-installer: make yokecd docker image version configurable ([821d6e3](https://github.com/davidmdm/yoke/commit/821d6e3ee992f7ff25b75ba3ea84d55a85bae5f5))
 
-## v0.0.4
+## v0.0.4 (2024-04-29)
 
 * yoke: add namespace to debug timer ([4e8ab04](https://github.com/davidmdm/yoke/commit/4e8ab04a46382649e3b52930fb0f590b2fc3a5a2))
 * refactor: fix import orderings ([6d3a09f](https://github.com/davidmdm/yoke/commit/6d3a09f3aed6e77fc42a9d8ff06289b91e51999a))
@@ -81,38 +81,38 @@
 * yoke: fix help text mistakes ([a6657ae](https://github.com/davidmdm/yoke/commit/a6657ae620d3d80c5f24c81c172e34d76b62c979))
 * yokecd: remove wasm after use in build mode ([7dbd330](https://github.com/davidmdm/yoke/commit/7dbd330cea6c1d3fcf51390d3c4ab257968bb520))
 
-## v0.0.3
+## v0.0.3 (2024-04-25)
 
 * yokecd: added config parsing tests ([7dc8200](https://github.com/davidmdm/yoke/commit/7dc8200c13f9750cc93f093586dcec227d883a25))
 * yokecd: add build mode ([8760b9f](https://github.com/davidmdm/yoke/commit/8760b9f94723a161281192187bd09bc30ddfe499))
 
-## yokecd-installer/v0.0.2
+## yokecd-installer/v0.0.2 (2024-04-21)
 
 * releaser: fix patch inference ([960853a](https://github.com/davidmdm/yoke/commit/960853a4ab113904077430db84081ac264685b4c))
 * pkg: added flight package with convenience functions for flight execution contexts ([fd401ea](https://github.com/davidmdm/yoke/commit/fd401ea19d5bb304fb4b7b45245c55e9c689c615))
 * yokecd: require wasm field at config load time ([660a913](https://github.com/davidmdm/yoke/commit/660a913f6ec1fae7fe216cb3a4b0c8dbb144d6a2))
 
-## v0.0.2
+## v0.0.2 (2024-04-20)
 
 * yoke: added verbose mode with debug timings for functions ([2f87cef](https://github.com/davidmdm/yoke/commit/2f87cef5cf06e757f73dcc21643aa38117fe24c2))
 * yoke: improve takeoff help text ([b74f17d](https://github.com/davidmdm/yoke/commit/b74f17d1599a6cb7ce49b202145fed3663a5dad7))
 * yoke: add wazero to version output ([af90ae6](https://github.com/davidmdm/yoke/commit/af90ae6624b7687982f8f74f0ee890cc87e9ee41))
 
-## v0.0.1 yokecd-installer/v0.0.1
+## v0.0.1 (2024-04-20) - yokecd-installer/v0.0.1 (2024-04-20)
 
 * releaser: release patch versions from now on ([eac2db4](https://github.com/davidmdm/yoke/commit/eac2db4c409ab28039c4cddc86c1c4a96f380553))
 * update dependencies ([44a6dd7](https://github.com/davidmdm/yoke/commit/44a6dd79af61344d345804feb894a843eedb6653))
 * yoke: fix force conflicts flag not propagated ([a8a086c](https://github.com/davidmdm/yoke/commit/a8a086c210e04f2323b8f44289fdf138a9204186))
 * yoke: interpret http path suffixes with .gz as gzipped content ([e68f8ba](https://github.com/davidmdm/yoke/commit/e68f8ba32e3b96bf7dc93a342799ece3a8f8623b))
 
-## yokecd-installer/v0.0.0-20241704012137
+## yokecd-installer/v0.0.0-20241704012137 (2024-04-16)
 
 * yokecd: use argo-helm/argocd for installer ([a3fe4df](https://github.com/davidmdm/yoke/commit/a3fe4df441404ab2a9b1225175e8ed3c2fac603c))
 * yoke: use secrets instead of configmaps for storing revision state ([5e39717](https://github.com/davidmdm/yoke/commit/5e397171e214463166f5facfa62050f0f60324fd))
 * add tests to workflow ([01608f8](https://github.com/davidmdm/yoke/commit/01608f8a5df6186fbd5522f1440b4990133db177))
 * revert wazero to v1.6.0 and use compiler ([c5d48bf](https://github.com/davidmdm/yoke/commit/c5d48bf0556b28df698c438747ed6d3d02a15e38))
 
-## yokecd-installer/v0.0.0-20241004031222
+## yokecd-installer/v0.0.0-20241004031222 (2024-04-09)
 
 * fix compressor ([5dc59c0](https://github.com/davidmdm/yoke/commit/5dc59c0721aa56bf77ceb9995dd46b5e49688446))
 * fix download err ([2552acb](https://github.com/davidmdm/yoke/commit/2552acbfc0a563475bc9013a8a54877535069840))
@@ -126,7 +126,7 @@
 * yokecd: add suport for wasmPath parameter ([cfc3952](https://github.com/davidmdm/yoke/commit/cfc39526323d6e295fc03ff98f299a81f90b2dba))
 * test simplified yokecd application ([70c44d3](https://github.com/davidmdm/yoke/commit/70c44d3bf34b8aeb005eedcbdb564cace0279492))
 
-## v0.0.0-beta3
+## v0.0.0-beta3 (2024-03-24)
 
 * hardcode yokecd as plugin name, and simplified plugin definition ([0de06a9](https://github.com/davidmdm/yoke/commit/0de06a959bde14d7432f737d60e9a77db88e79a1))
 * removed yoke exec in favor of takeoff --test-run ([a88793b](https://github.com/davidmdm/yoke/commit/a88793b08995540b31bb3715b08e4cb084bacbf1))
@@ -152,7 +152,7 @@
 * update helm2go to default to map[string]any if cannot generate values type ([48b3a22](https://github.com/davidmdm/yoke/commit/48b3a22d16b9f4bbd788865b077fecc695488756))
 * add force-conflicts flag for takeoff ([c058acb](https://github.com/davidmdm/yoke/commit/c058acb49961f7a67822a4e928cd069d237aa776))
 
-## v0.0.0-beta2
+## v0.0.0-beta2 (2024-03-15)
 
 * use server-side apply patch ([68f1d97](https://github.com/davidmdm/yoke/commit/68f1d9716d0f29788aef1a831a9d958a94bcc98d))
 * use official argocd install yaml for argo example ([bb46eb3](https://github.com/davidmdm/yoke/commit/bb46eb3d25ef9fe2492884a311ce83fbb595c35c))
@@ -169,7 +169,7 @@
 * generated pg values.go using helm2go ([0c360bb](https://github.com/davidmdm/yoke/commit/0c360bb9cd7c1665b5150ecc7a4746f6029b9544))
 * renamed platters to flights and added helm2go script ([9da0265](https://github.com/davidmdm/yoke/commit/9da02655f5e3985e18c3343ff64e7b589bd83735))
 
-## v0.0.0-beta1
+## v0.0.0-beta1 (2024-02-29)
 
 * starting website ([dd8c995](https://github.com/davidmdm/yoke/commit/dd8c99584130ab84915a6bf5cc7e5c36af8de2a1))
 * added apply dry run failure test ([10c65b7](https://github.com/davidmdm/yoke/commit/10c65b7b86d5f7976e4a6ff3e47ec262c8d50748))
@@ -193,17 +193,17 @@
 * update helmchart example to make it configurable ([c5133ef](https://github.com/davidmdm/yoke/commit/c5133ef509b318a3fd47eaafc8426b0e7ce0d844))
 * update halloumi metadata ([11c9b2e](https://github.com/davidmdm/yoke/commit/11c9b2e654f2eb486af4e5fcf61d191ad5937771))
 
-## v0.0.0-alpha17
+## v0.0.0-alpha17 (2024-02-25)
 
 * updated helm api ([964d147](https://github.com/davidmdm/yoke/commit/964d147b1171920142533a87ce3868a23e2dccd1))
 * initial support for helm chart compatibility ([d3c926e](https://github.com/davidmdm/yoke/commit/d3c926e94022635bab35f32d91108df675e1d7e5))
 
-## v0.0.0-alpha16
+## v0.0.0-alpha16 (2024-02-24)
 
 * update verison command to show k8 client-go version as well ([831fdd7](https://github.com/davidmdm/yoke/commit/831fdd7d5573cb1bda1b7c4f28d500d1403bec79))
 * change diff indentation ([f3173be](https://github.com/davidmdm/yoke/commit/f3173be28d44754138e929b83245d0b103538970))
 
-## v0.0.0-alpha15
+## v0.0.0-alpha15 (2024-02-24)
 
 * print diff between revisions ([706e050](https://github.com/davidmdm/yoke/commit/706e0501a4b9789fae2801249ef7da9fe0cb3187))
 * refactored revision source ([6aa96a5](https://github.com/davidmdm/yoke/commit/6aa96a5c38a54559ee93a7990f53b68bf0a0ccfa))
@@ -211,73 +211,73 @@
 * refactor blackbox ([fc4ad5a](https://github.com/davidmdm/yoke/commit/fc4ad5a722f885309e9054b37a3ecaf5c1d66cbf))
 * update blackbox output ([505e281](https://github.com/davidmdm/yoke/commit/505e281d35810e3b80966d06c948dd3e210626bf))
 
-## v0.0.0-alpha14
+## v0.0.0-alpha14 (2024-02-24)
 
 * added mayday command ([d982624](https://github.com/davidmdm/yoke/commit/d982624ea20bb8dfd6b7702a13e96717797e507e))
 * remove unnecessary newline from error ([2702985](https://github.com/davidmdm/yoke/commit/27029855fe5e16f1067c89c29fff4727881953d3))
 
-## v0.0.0-alpha13
+## v0.0.0-alpha13 (2024-02-23)
 
 * finish first pass at blackbox command ([558273b](https://github.com/davidmdm/yoke/commit/558273b069e75547c672ba19e881cd25b7b16c6d))
 * update deps and formatting ([05b5096](https://github.com/davidmdm/yoke/commit/05b5096d29158e5ba26e701da4222360e978ceec))
 * blackbox under construction ([91d3fa7](https://github.com/davidmdm/yoke/commit/91d3fa78c37795b21e3b0b626a1ea0c5393ea647))
 * removed resource utility package in favor of applyconfigurations ([2de98b0](https://github.com/davidmdm/yoke/commit/2de98b0ed2679917f0f7cec389df3596538caaff))
 
-## v0.0.0-alpha12
+## v0.0.0-alpha12 (2024-02-23)
 
 * create an ownership check ([8c2d7f9](https://github.com/davidmdm/yoke/commit/8c2d7f9f4993e0e1c3140a991f8206ce9adca570))
 * added blackbox shell ([3c34f8c](https://github.com/davidmdm/yoke/commit/3c34f8c6c44a8ba6acd480fbfe39640ed46fec45))
 
-## v0.0.0-alpha11
+## v0.0.0-alpha11 (2024-02-21)
 
 * first working pass of descent command ([91cc860](https://github.com/davidmdm/yoke/commit/91cc86088b8f82c3939089398731fb4480284581))
 * first pass at descent command ([c71368b](https://github.com/davidmdm/yoke/commit/c71368bbdc8e953674e7f5f8533ea639754e8424))
 * modified configmap structure ([cb0691f](https://github.com/davidmdm/yoke/commit/cb0691fc4ae2363f0dea13c0595f806c5f38286e))
 * dynamic platter example ([043358a](https://github.com/davidmdm/yoke/commit/043358a269737ad7dfd53e302b7c2c4dd92d705f))
 
-## v0.0.0-alpha10
+## v0.0.0-alpha10 (2024-02-19)
 
 * updated canonical name to include api version and changed deploy to apply ([78980fb](https://github.com/davidmdm/yoke/commit/78980fb1b7f434d32417bf0ac33c9316faf4dcc4))
 * adding to resource utility package ([4bf13be](https://github.com/davidmdm/yoke/commit/4bf13be489cdef9861ac2205002084e8aeeb1d55))
 
-## v0.0.0-alpha9
+## v0.0.0-alpha9 (2024-02-18)
 
 * do not apply identical revisisions but do a noop ([750de31](https://github.com/davidmdm/yoke/commit/750de31c9907f162a574bb5bf08b803a4da2e3a6))
 * added beginning of a basic utility package for resource definitions ([cd43c11](https://github.com/davidmdm/yoke/commit/cd43c1173f568dbabfe10015c79cf70f73e5dc82))
 
-## v0.0.0-alpha8
+## v0.0.0-alpha8 (2024-02-18)
 
 * allow wasm executable to receive stdin as input ([d7d9922](https://github.com/davidmdm/yoke/commit/d7d992296e40451d9ea596976cbd27be007301dc))
 
-## v0.0.0-alpha7
+## v0.0.0-alpha7 (2024-02-18)
 
 * add outdir option to takeoff instead of render or runway command ([c860e31](https://github.com/davidmdm/yoke/commit/c860e315edbe951695d05ac238a1f6ffa5f860f8))
 
-## v0.0.0-alpha6
+## v0.0.0-alpha6 (2024-02-18)
 
 * support yaml encodings of platters ([8f4cde7](https://github.com/davidmdm/yoke/commit/8f4cde72f2cd506ebdf9e18ba09e8c49b041c86d))
 
-## v0.0.0-alpha5
+## v0.0.0-alpha5 (2024-02-17)
 
 * add single or multi resource platter support and stdin source support ([20fc25f](https://github.com/davidmdm/yoke/commit/20fc25fcb849627707e63edf0c6b8fc0213e75bb))
 * fix newline after root help text if no command provided ([2d4e04f](https://github.com/davidmdm/yoke/commit/2d4e04fdd0dd23998896de8899cd3f43d4c16654))
 
-## v0.0.0-alpha4
+## v0.0.0-alpha4 (2024-02-17)
 
 * small refactoring ([acc3351](https://github.com/davidmdm/yoke/commit/acc335177e86337209fc2a2746398df8d03871be))
 * add dry run before applying resources ([3cb6d54](https://github.com/davidmdm/yoke/commit/3cb6d54736c4d80c3331913bc9c95b50e2dea8aa))
 * add halloumi logo to readme ([f98fb12](https://github.com/davidmdm/yoke/commit/f98fb129e683b8b1fbf7ae72ce4c00a65ee69b5b))
 * update readme ([087d62c](https://github.com/davidmdm/yoke/commit/087d62c6e6adb6ecae29d3c26f24bebdb3079332))
 
-## v0.0.0-alpha3
+## v0.0.0-alpha3 (2024-02-17)
 
 * added readme, license, and more aliases ([a8e6152](https://github.com/davidmdm/yoke/commit/a8e615276d55e64debe3a73048c8ad12974f37d6))
 
-## v0.0.0-alpha2
+## v0.0.0-alpha2 (2024-02-17)
 
 * go directive 1.22 ([b965e58](https://github.com/davidmdm/yoke/commit/b965e584bae7252d4c87f14a5ad87a0df7642c27))
 
-## v0.0.0-alpha1
+## v0.0.0-alpha1 (2024-02-17)
 
 * added root command help text ([26c24a3](https://github.com/davidmdm/yoke/commit/26c24a36f09a724187c6a2fcfef913f67aefaee4))
 * takeoff help text ([11a8602](https://github.com/davidmdm/yoke/commit/11a86027ec3cee286869a67e9ddd870c8caac352))

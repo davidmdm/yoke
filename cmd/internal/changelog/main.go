@@ -6,6 +6,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -33,20 +34,26 @@ func run() error {
 		return fmt.Errorf("failed to read tags: %w", err)
 	}
 
-	tags := map[string]string{}
+	tags := map[string][]Tag{}
 
-	iter.ForEach(func(r *plumbing.Reference) error {
+	err = iter.ForEach(func(r *plumbing.Reference) error {
 		hash := r.Hash().String()
-		current := strings.TrimPrefix(r.Name().String(), "refs/tags/")
 
-		if previous := tags[hash]; previous != "" {
-			tags[hash] = previous + " " + current
-			return nil
+		commit, err := repo.CommitObject(r.Hash())
+		if err != nil {
+			return fmt.Errorf("failed to get commit for hash %s: %w", hash, err)
 		}
 
-		tags[hash] = current
+		tags[hash] = append(tags[hash], Tag{
+			Name:      strings.TrimPrefix(r.Name().String(), "refs/tags/"),
+			CreatedAt: commit.Committer.When,
+		})
+
 		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("failed to iterate through tags: %w", err)
+	}
 
 	commits, err := repo.Log(&git.LogOptions{Order: git.LogOrderCommitterTime})
 	if err != nil {
@@ -56,9 +63,10 @@ func run() error {
 	var changelog Changelog
 
 	commits.ForEach(func(c *object.Commit) error {
-		if tag := tags[c.Hash.String()]; tag != "" {
-			changelog = append(changelog, Entry{Tag: tag})
+		if tags := tags[c.Hash.String()]; len(tags) > 0 {
+			changelog = append(changelog, Entry{Tags: tags})
 		}
+		// Commit isn't associated to any tags so not needed in changelog
 		if len(changelog) == 0 {
 			return nil
 		}
@@ -83,11 +91,20 @@ type (
 		Msg string
 		Sha string
 	}
+
+	Tag struct {
+		Name      string
+		CreatedAt time.Time
+	}
 	Entry struct {
-		Tag     string
+		Tags    []Tag
 		Commits []Commit
 	}
 )
+
+func (tag Tag) String() string {
+	return fmt.Sprintf("%s (%s)", tag.Name, tag.CreatedAt.Format("2006-01-02"))
+}
 
 func (changelog Changelog) String() string {
 	var builder strings.Builder
@@ -98,7 +115,12 @@ func (changelog Changelog) String() string {
 	builder.WriteString("> Pre v1.0.0 minor bumps will repesent breaking changes.\n\n")
 
 	for _, entry := range changelog {
-		builder.WriteString("## " + entry.Tag + "\n\n")
+		var tags []string
+		for _, tag := range entry.Tags {
+			tags = append(tags, tag.String())
+		}
+
+		builder.WriteString("## " + strings.Join(tags, " - ") + "\n\n")
 
 		if slices.ContainsFunc(entry.Commits, func(commit Commit) bool {
 			msg := strings.ToLower(commit.Msg)
