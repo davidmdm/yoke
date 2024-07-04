@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/davidmdm/yoke/internal"
-	"github.com/davidmdm/yoke/internal/wasi"
 	"github.com/davidmdm/yoke/pkg/yoke"
 )
 
@@ -42,26 +41,14 @@ func run(cfg Config) (err error) {
 
 		debug("loading wasm: %s", cfg.Flight.Wasm)
 
-		wasm, err := yoke.LoadWasm(context.Background(), cfg.Flight.Wasm)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load wasm: %w", err)
-		}
-
-		debug("executing wasm")
-
-		data, err := wasi.Execute(context.Background(), wasi.ExecParams{
-			Wasm:    wasm,
-			Release: cfg.Application.Name,
-			Stdin:   strings.NewReader(cfg.Flight.Input),
-			Args:    cfg.Flight.Args,
-			Env:     map[string]string{"NAMESPACE": cfg.Application.Namespace},
+		data, _, err := yoke.EvalFlight(context.Background(), cfg.Application.Name, yoke.FlightParams{
+			Path:      cfg.Flight.Wasm,
+			Input:     strings.NewReader(cfg.Flight.Input),
+			Args:      cfg.Flight.Args,
+			Namespace: cfg.Application.Namespace,
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to execute wams: %w", err)
-		}
-		debug("wasm executed without error")
 
-		return data, nil
+		return data, err
 	}()
 	if err != nil {
 		return fmt.Errorf("failed to execute flight wasm: %w", err)
