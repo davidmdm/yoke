@@ -33,7 +33,7 @@ func (revisions Revisions) Active() Revision {
 func (revisions Revisions) ActiveIndex() int {
 	var active int
 	for i, revision := range revisions.History {
-		if revision.ActiveAt.After(revisions.History[i].ActiveAt) {
+		if revision.ActiveAt.After(revisions.History[active].ActiveAt) {
 			active = i
 		}
 	}
