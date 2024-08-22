@@ -4,6 +4,15 @@
 > This project has not reached v1.0.0 and as such provides no backwards compatibility guarantees between versions.
 > Pre v1.0.0 minor bumps will repesent breaking changes.
 
+## v0.1.1 (2024-08-22)
+
+* cmd/blackbox: fix active revision when listing release revisions ([e08dd7f](https://github.com/davidmdm/yoke/commit/e08dd7fb82cf2c611c20687770097c39aebda056))
+* chore: update dependencies ([ec169ac](https://github.com/davidmdm/yoke/commit/ec169ac9ca9aab5f142ed3396ccc6b9e29168c85))
+* yokecd: use yoke.EvalFlight instad of low-level wasi.Execute to be more compatible with pkg/Flight helpers ([87230e9](https://github.com/davidmdm/yoke/commit/87230e9e720c8e386c70ea1a86782408ec46f944))
+* cmd/internal/changelog: add dates to tag ([6163eae](https://github.com/davidmdm/yoke/commit/6163eae045e3d5487d519414dc82b03337c5403a))
+* cmd/internal/changelog: fix issue where multiple tags on same commit would only show one tag ([dae2c54](https://github.com/davidmdm/yoke/commit/dae2c543adc2bad74cb8ea62bfa9a539ce2791fc))
+* cmd/internal/changelog: added internal command to generate changelog for project ([c98628b](https://github.com/davidmdm/yoke/commit/c98628b6443eed0029acf368e5ab12f57ad7c8ef))
+
 ## v0.1.0 (2024-06-22)
 
 > [!CAUTION]
