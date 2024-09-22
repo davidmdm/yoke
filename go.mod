@@ -11,7 +11,7 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.5.9
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/stretchr/testify v1.9.0
-	github.com/tetratelabs/wazero v1.8.0
+	github.com/tetratelabs/wazero v1.6.0
 	golang.org/x/mod v0.21.0
 	golang.org/x/term v0.24.0
 	gopkg.in/yaml.v3 v3.0.1
