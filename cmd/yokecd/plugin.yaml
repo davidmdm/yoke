@@ -1,8 +1,0 @@
-apiVersion: argoproj.io/v1alpha1
-kind: ConfigManagementPlugin
-metadata:
-  name: yokecd
-spec:
-  preserveFileMode: false
-  generate:
-    command: [yokecd]
